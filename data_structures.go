@@ -6,6 +6,8 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+// Interface for things that can be Checked (i.e. validated after a JSON
+// parsing for instance)
 type Checkable interface {
 	Check() (err error)
 }
@@ -49,6 +51,7 @@ func (u *Preduplet) Check() (err error) {
 // Defines a learn-uplet
 type LearnUplet struct {
 	Checkable
+	// TODO add rank
 
 	Id             uuid.UUID   `json:"id"`
 	Problem        uuid.UUID   `json:"problem"`
@@ -145,4 +148,15 @@ func (u *TestTask) Check() (err error) {
 	}
 
 	return nil
+}
+
+// This object is sent back by the HTTP API on errors
+type APIError struct {
+	Message string `json:"string"`
+}
+
+func NewAPIError(message string) (err *APIError) {
+	return &APIError{
+		Message: message,
+	}
 }
