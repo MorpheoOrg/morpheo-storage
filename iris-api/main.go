@@ -12,6 +12,7 @@ import (
 	"gopkg.in/kataras/iris.v6/middleware/logger"
 
 	"github.com/DeepSee/dc-compute"
+	common "github.com/DeepSee/dc-compute/common"
 )
 
 // TODO: write tests for the four main views
@@ -23,15 +24,21 @@ const (
 	predRoute      = "/pred"
 	learnTaskRoute = "/learn-task"
 	testTaskRoute  = "/test-task"
+
+	PredictionTopic = "prediction"
+	TestTopic       = "test"
+	LearnTopic      = "train"
 )
 
 type APIServer struct {
-	conf *dccompute.Config
+	conf     *dccompute.Config
+	producer common.Producer
 }
 
-func NewAPIServer(conf *dccompute.Config) (s *APIServer) {
+func NewAPIServer(conf *dccompute.Config, producer common.Producer) (s *APIServer) {
 	return &APIServer{
-		conf: conf,
+		conf:     conf,
+		producer: producer,
 	}
 }
 
@@ -62,8 +69,21 @@ func main() {
 	})
 	app.Use(customLogger)
 
+	// Let's dependency inject the producer for the chosen Broker
+	var producer common.Producer
+	switch conf.Broker {
+	case common.BrokerNSQ:
+		var err error
+		producer, err = common.NewNSQProducer(conf.BrokerHost, conf.BrokerPort)
+		if err != nil {
+			log.Panicln(err)
+		}
+	default:
+		log.Panicf("Unsupported broker (%s). The only available broker is 'nsq'", conf.Broker)
+	}
+
 	// Handlers configuration
-	apiServer := NewAPIServer(conf)
+	apiServer := NewAPIServer(conf, producer)
 	apiServer.configureRoutes(app)
 
 	// Main server loop
@@ -112,7 +132,7 @@ func (s *APIServer) postLearnuplet(c *iris.Context) {
 
 	payload, err := json.Marshal(firstTask)
 	if err != nil {
-		msg := fmt.Sprintf("Impossible to Marshal first task: %s", err)
+		msg := fmt.Sprintf("Failed to Marshal first task: %s", err)
 		log.Printf("[ERROR] %s", msg)
 		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 		return
@@ -120,7 +140,7 @@ func (s *APIServer) postLearnuplet(c *iris.Context) {
 
 	req, err := http.NewRequest("POST", executionClusterURL, bytes.NewBuffer(payload))
 	if err != nil {
-		msg := fmt.Sprintf("Impossible to build first task POST request for compute cluster [%s]: %s", executionClusterURL, err)
+		msg := fmt.Sprintf("Failed to build first task POST request for compute cluster [%s]: %s", executionClusterURL, err)
 		log.Printf("[ERROR] %s", msg)
 		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 		return
@@ -138,7 +158,7 @@ func (s *APIServer) postLearnuplet(c *iris.Context) {
 		var apiError dccompute.APIError
 		err := json.NewDecoder(c.Request.Body).Decode(&apiError)
 		if err != nil {
-			msg := fmt.Sprintf("Impossible to parse [%s] JSON response: %s", executionClusterURL, err)
+			msg := fmt.Sprintf("Failed to parse [%s] JSON response: %s", executionClusterURL, err)
 			log.Printf("[ERROR] %s", msg)
 			c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 			return
@@ -171,7 +191,20 @@ func (s *APIServer) postPreduplet(c *iris.Context) {
 		return
 	}
 	// TODO: notify the orchestrator we're starting this prediction process
-	// TODO: send task to broker
+	taskBytes, err := json.Marshal(predUplet)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to remarshal preduplet to JSON: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
+	err = s.producer.Push(PredictionTopic, taskBytes)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to push preduplet task into broker: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
 	c.JSON(iris.StatusAccepted, map[string]string{"message": "Pred-uplet ingested"})
 }
 
@@ -194,7 +227,20 @@ func (s *APIServer) postLearnTask(c *iris.Context) {
 		return
 	}
 	// TODO: notify the orchestrator we're starting this prediction process
-	// TODO: send task to broker
+	taskBytes, err := json.Marshal(learnTask)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to remarshal JSON learn task: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
+	err = s.producer.Push(LearnTopic, taskBytes)
+	if err != nil {
+		msg := fmt.Sprintf("Failed push learn task into broker: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
 	c.JSON(iris.StatusAccepted, map[string]string{"message": "Learn task ingested"})
 }
 
@@ -211,12 +257,25 @@ func (s *APIServer) postTestTask(c *iris.Context) {
 
 	// Let's check for required arguments presence and validity
 	if err := testTask.Check(); err != nil {
-		msg := fmt.Sprintf("Invalid test-task: %s", err)
+		msg := fmt.Sprintf("Invalid test task: %s", err)
 		log.Printf("[INFO] %s", msg)
 		c.JSON(iris.StatusBadRequest, dccompute.NewAPIError(msg))
 		return
 	}
 	// TODO: notify the orchestrator we're starting this prediction process
-	// TODO: send task to broker
+	taskBytes, err := json.Marshal(testTask)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to remarshal test task to JSON: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
+	err = s.producer.Push(TestTopic, taskBytes)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to push test task into broker: %s", err)
+		log.Printf("[ERROR] %s", msg)
+		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		return
+	}
 	c.JSON(iris.StatusAccepted, map[string]string{"message": "Test task ingested"})
 }

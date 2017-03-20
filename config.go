@@ -4,6 +4,8 @@ import (
 	"flag"
 	"strings"
 	"sync"
+
+	common "github.com/DeepSee/dc-compute/common"
 )
 
 // DC-Compute configuration, subject to dynamic changes for the addresses of
@@ -14,6 +16,7 @@ type Config struct {
 	Port                 int
 	OchestratorEndpoints []string
 	StorageEndpoints     []string
+	Broker               string
 	BrokerHost           string
 	BrokerPort           int
 	CertFile             string
@@ -50,6 +53,7 @@ func NewConfig() (conf *Config) {
 		port          int
 		orchestrators MultiStringFlag
 		storages      MultiStringFlag
+		broker        string
 		brokerHost    string
 		brokerPort    int
 		certFile      string
@@ -61,7 +65,8 @@ func NewConfig() (conf *Config) {
 	flag.IntVar(&port, "port", 8000, "The port our compute API will be listening on")
 	flag.Var(&orchestrators, "orchestrator", "List of endpoints (scheme and port included) for the orchestrators we want to bind to.")
 	flag.Var(&storages, "storage", "List of endpoints (scheme and port included) for the storage nodes to bind to.")
-	flag.StringVar(&brokerHost, "broker", "localhost", "The address of the NSQ Broker to talk to")
+	flag.StringVar(&broker, "broker", common.BrokerNSQ, "Broker type to use (only 'nsq' available for now)")
+	flag.StringVar(&brokerHost, "broker-host", "nsqd", "The address of the NSQ Broker to talk to")
 	flag.IntVar(&brokerPort, "broker-port", 4160, "The port of the NSQ Broker to talk to")
 	flag.StringVar(&certFile, "cert", "", "The ")
 	flag.StringVar(&keyFile, "key", "", "The address of the NSQ Broker to talk to")
@@ -82,6 +87,7 @@ func NewConfig() (conf *Config) {
 		Port:                 port,
 		OchestratorEndpoints: orchestrators,
 		StorageEndpoints:     storages,
+		Broker:               broker,
 		BrokerHost:           brokerHost,
 		BrokerPort:           brokerPort,
 		CertFile:             certFile,
