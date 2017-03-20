@@ -14,6 +14,10 @@
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
+# Glide deps and build targets
+vendor/
+target/
+
 # Vim
 # swap
 [._]*.s[a-v][a-z]
