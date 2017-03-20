@@ -75,6 +75,7 @@ func main() {
 	case common.BrokerNSQ:
 		var err error
 		producer, err = common.NewNSQProducer(conf.BrokerHost, conf.BrokerPort)
+		defer producer.Stop()
 		if err != nil {
 			log.Panicln(err)
 		}

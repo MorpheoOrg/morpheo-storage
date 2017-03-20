@@ -20,7 +20,7 @@ func NewNSQProducer(hostname string, port int) (p *ProducerNSQ, err error) {
 	p = &ProducerNSQ{}
 
 	config := nsq.NewConfig()
-	p.NsqProducer, err = nsq.NewProducer(fmt.Sprintf("%s:%d%", hostname, port), config)
+	p.NsqProducer, err = nsq.NewProducer(fmt.Sprintf("%s:%d", hostname, port), config)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating NSQ producer: %s", err)
 	}
