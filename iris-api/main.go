@@ -24,18 +24,14 @@ const (
 	predRoute      = "/pred"
 	learnTaskRoute = "/learn-task"
 	testTaskRoute  = "/test-task"
-
-	PredictionTopic = "prediction"
-	TestTopic       = "test"
-	LearnTopic      = "train"
 )
 
 type APIServer struct {
-	conf     *dccompute.Config
+	conf     *dccompute.ProducerConfig
 	producer common.Producer
 }
 
-func NewAPIServer(conf *dccompute.Config, producer common.Producer) (s *APIServer) {
+func NewAPIServer(conf *dccompute.ProducerConfig, producer common.Producer) (s *APIServer) {
 	return &APIServer{
 		conf:     conf,
 		producer: producer,
@@ -53,7 +49,7 @@ func (s *APIServer) configureRoutes(app *iris.Framework) {
 
 func main() {
 	// App-specific config
-	conf := dccompute.NewConfig()
+	conf := dccompute.NewProducerConfig()
 
 	// Iris setup
 	app := iris.New()
@@ -61,7 +57,7 @@ func main() {
 	app.Adapt(httprouter.New())
 
 	// Logger middleware configuration
-	customLogger := logger.New(logger.Config{
+	customLogger := logger.New(logger.ProducerConfig{
 		Status: true,
 		IP:     true,
 		Method: true,
@@ -199,7 +195,7 @@ func (s *APIServer) postPreduplet(c *iris.Context) {
 		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 		return
 	}
-	err = s.producer.Push(PredictionTopic, taskBytes)
+	err = s.producer.Push(dccompute.PredictionTopic, taskBytes)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to push preduplet task into broker: %s", err)
 		log.Printf("[ERROR] %s", msg)
@@ -235,7 +231,7 @@ func (s *APIServer) postLearnTask(c *iris.Context) {
 		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 		return
 	}
-	err = s.producer.Push(LearnTopic, taskBytes)
+	err = s.producer.Push(dccompute.LearnTopic, taskBytes)
 	if err != nil {
 		msg := fmt.Sprintf("Failed push learn task into broker: %s", err)
 		log.Printf("[ERROR] %s", msg)
@@ -271,7 +267,7 @@ func (s *APIServer) postTestTask(c *iris.Context) {
 		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
 		return
 	}
-	err = s.producer.Push(TestTopic, taskBytes)
+	err = s.producer.Push(dccompute.TestTopic, taskBytes)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to push test task into broker: %s", err)
 		log.Printf("[ERROR] %s", msg)

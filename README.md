@@ -90,4 +90,6 @@ Interfaces
 
 ## TODO
 
+* [configuration management] Use Viper or Cobra
 * Use protobuf (at least internally) instead of JSON ?
+* Keep track of the number of retries for each task and enforce it

@@ -16,10 +16,10 @@ type Checkable interface {
 type Preduplet struct {
 	Checkable
 
-	Id      uuid.UUID   `json:"id"`
-	Problem uuid.UUID   `json:"problem"`
-	Model   uuid.UUID   `json:"model"`
-	Data    []uuid.UUID `json:"data"` // ? Why a list field here ?
+	Id      uuid.UUID `json:"id"`
+	Problem uuid.UUID `json:"problem"`
+	Model   uuid.UUID `json:"model"`
+	Data    uuid.UUID `json:"data"` // ? Why a list field here ?
 }
 
 func (u *Preduplet) Check() (err error) {
@@ -39,10 +39,9 @@ func (u *Preduplet) Check() (err error) {
 	if len(u.Data) == 0 {
 		return fmt.Errorf("train_data is empty or unset")
 	}
-	for _, id := range u.Data {
-		if uuid.Equal(uuid.Nil, id) {
-			return fmt.Errorf("Nil UUID in dataset")
-		}
+
+	if uuid.Equal(uuid.Nil, u.Data) {
+		return fmt.Errorf("data field is unset")
 	}
 
 	return nil
@@ -129,6 +128,10 @@ func (u *LearnTask) Check() (err error) {
 		return fmt.Errorf("data field is unset")
 	}
 
+	if u.LearnUplet == nil {
+		return fmt.Errorf("Learn-Uplet field is unset")
+	}
+
 	return nil
 }
 
@@ -147,6 +150,10 @@ func (u *TestTask) Check() (err error) {
 		return fmt.Errorf("data field is unset")
 	}
 
+	if u.LearnUplet == nil {
+		return fmt.Errorf("Learn-Uplet field is unset")
+	}
+
 	return nil
 }
 
@@ -159,4 +166,23 @@ func NewAPIError(message string) (err *APIError) {
 	return &APIError{
 		Message: message,
 	}
+}
+
+// Describes an error happening in the consumer that indicates the
+// errord task can be retried (if the retry limit hasn't been reached)
+type TaskError struct {
+	Message string `json:"string"`
+}
+
+func (e *TaskError) Error() string {
+	return e.Message
+}
+
+// Describes an error happening in the consumer that isn't worth a retry
+type FatalTaskError struct {
+	Message string `json:"string"`
+}
+
+func (e *FatalTaskError) Error() string {
+	return e.Message
 }

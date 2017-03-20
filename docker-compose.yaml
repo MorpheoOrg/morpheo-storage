@@ -4,11 +4,24 @@ services:
   # DC-Compute: producer
   compute:
     build: ./iris-api
+    restart: unless-stopped
     command: -host 0.0.0.0 -port ${API_PORT} -broker nsq -broker-host nsqd -broker-port 4150
     ports:
     - "${API_PORT}:${API_PORT}/tcp"
     networks:
     - internal
+    depends_on:
+    - nsqd
+
+  # DC-Compute: learning consumer
+  compute-learning-workers:
+    build: ./nsq-consumer
+    restart: unless-stopped
+    command: -lookup-urls nsqlookupd:4161 -topic "train" -channel "compute"
+    networks:
+    - internal
+    depends_on:
+    - nsqlookupd
 
   # Nsqlookupd: service discovery for Nsqd
   nsqlookupd:
@@ -17,6 +30,8 @@ services:
     command: /nsqlookupd
     networks:
     - internal
+    depends_on:
+    - nsqd
 
   # Nsqd: the distributed broker
   nsqd:
@@ -25,6 +40,7 @@ services:
     command: /nsqd --lookupd-tcp-address="nsqlookupd:4160"
     networks:
     - internal
+
   nsqadmin:
     image: nsqio/nsq:latest
     restart: unless-stopped

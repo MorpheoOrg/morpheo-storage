@@ -8,10 +8,16 @@ import (
 	common "github.com/DeepSee/dc-compute/common"
 )
 
-// DC-Compute configuration, subject to dynamic changes for the addresses of
+const (
+	PredictionTopic = "prediction"
+	TestTopic       = "test"
+	LearnTopic      = "train"
+)
+
+// Compute API configuration, subject to dynamic changes for the addresses of
 // storage & orchestrator endpoints, and any RESTFul HTTP API added in the
 // future.
-type Config struct {
+type ProducerConfig struct {
 	Hostname             string
 	Port                 int
 	OchestratorEndpoints []string
@@ -26,15 +32,15 @@ type Config struct {
 }
 
 // Returns true if TLS credentials have been provided
-func (c *Config) TLSOn() bool {
+func (c *ProducerConfig) TLSOn() bool {
 	return c.CertFile != "" && c.KeyFile != ""
 }
 
-func (c *Config) Lock() {
+func (c *ProducerConfig) Lock() {
 	c.lock.Lock()
 }
 
-func (c *Config) Unlock() {
+func (c *ProducerConfig) Unlock() {
 	c.lock.Unlock()
 }
 
@@ -47,7 +53,7 @@ func (c *Config) Unlock() {
 // When using the config, please keep in mind that it can therefore be changed
 // at any time. If you don't want this to happen, please use the object's
 // Lock()/Unlock() features.
-func NewConfig() (conf *Config) {
+func NewProducerConfig() (conf *ProducerConfig) {
 	var (
 		hostname      string
 		port          int
@@ -82,7 +88,7 @@ func NewConfig() (conf *Config) {
 	}
 
 	// Let's create the config structure
-	conf = &Config{
+	conf = &ProducerConfig{
 		Hostname:             hostname,
 		Port:                 port,
 		OchestratorEndpoints: orchestrators,
