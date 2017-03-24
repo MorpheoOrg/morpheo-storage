@@ -1,8 +1,40 @@
-hash: 1e42db74d796181a0abd61908db78ee6be10cdaf36b742a538eaff4141c9e7a0
-updated: 2017-03-20T11:25:11.086187069+01:00
+hash: a63b3a79b3d167957d8985e77bc908f44f2024441ffb834edd907e13d5d09e4b
+updated: 2017-03-23T17:51:42.493569056+01:00
 imports:
 - name: github.com/BurntSushi/toml
   version: d94612f9fc140360834f9742158c70b5c5b5535b
+- name: github.com/docker/distribution
+  version: 0700fa570d7bcc1b3e46ee127c4489fd25f4daa3
+  subpackages:
+  - digestset
+  - reference
+- name: github.com/docker/docker
+  version: 092cba3727bb9b4a2f0e922cd6c0f93ea270e363
+  subpackages:
+  - api/types
+  - api/types/blkiodev
+  - api/types/container
+  - api/types/events
+  - api/types/filters
+  - api/types/mount
+  - api/types/network
+  - api/types/reference
+  - api/types/registry
+  - api/types/strslice
+  - api/types/swarm
+  - api/types/time
+  - api/types/versions
+  - api/types/volume
+  - client
+  - pkg/tlsconfig
+- name: github.com/docker/go-connections
+  version: a2afab9802043837035592f1c24827fb70766de9
+  subpackages:
+  - nat
+  - sockets
+  - tlsconfig
+- name: github.com/docker/go-units
+  version: 0dadbb0345b35ec7ef35e228dabb8de89a65bf52
 - name: github.com/geekypanda/httpcache
   version: 76ba6c68462ae362cda7564c44492b95322b363a
   subpackages:
@@ -44,18 +76,26 @@ imports:
   version: 1bab8b35b6bb565f92cbc97939610af9369f942a
 - name: github.com/microcosm-cc/bluemonday
   version: e79763773ab6222ca1d5a7cbd9d62d83c1f77081
+- name: github.com/Microsoft/go-winio
+  version: fff283ad5116362ca252298cfc9b95828956d85d
 - name: github.com/mreiferson/go-snappystream
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
   - snappy-go
 - name: github.com/nsqio/go-nsq
   version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
+- name: github.com/opencontainers/go-digest
+  version: aa2ec055abd10d26d539eb630a92241b781ce4bc
+- name: github.com/pkg/errors
+  version: ff09b135c25aae272398c51a07235b90a75aa4f0
 - name: github.com/russross/blackfriday
   version: 5f33e7b7878355cd2b7e6b8eefc48a5472c69f70
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/shurcooL/sanitized_anchor_name
   version: 1dba4b3954bc059efc3991ec364f9f9a35f597d2
+- name: github.com/Sirupsen/logrus
+  version: 10f801ebc38b33738c9d17d50860f484a0988ff5
 - name: github.com/valyala/bytebufferpool
   version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
 - name: github.com/valyala/fasthttp
@@ -75,6 +115,12 @@ imports:
   - context/ctxhttp
   - html
   - html/atom
+  - proxy
+- name: golang.org/x/sys
+  version: 8fd966b47dbdd4faa03de0d06e3d733baeb9a1a9
+  subpackages:
+  - unix
+  - windows
 - name: google.golang.org/appengine
   version: b79c28f0197795b4050bfcd7c4c2209136c594b1
   subpackages:
@@ -86,7 +132,7 @@ imports:
   - internal/modules
   - internal/remote_api
 - name: gopkg.in/kataras/iris.v6
-  version: a1b34ee5c91b20e7140095b84c8e9acc49ee0852
+  version: ebc64d88a489571a01bc2a68e999136366599ce3
   subpackages:
   - adaptors/httprouter
   - middleware/logger

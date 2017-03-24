@@ -29,7 +29,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 
 	// TODO: pull data from storage in the trusted container
 
-	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), []string{task.Data.String()})
+	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), task.LearnUplet.Model.String(), []string{task.Data.String()}, time.Hour)
 	return
 }
 
@@ -42,7 +42,7 @@ func (w *Worker) HandleTest(message []byte) (err error) {
 
 	// TODO: pull data from storage in the trusted container
 
-	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), []string{task.Data.String()})
+	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), task.LearnUplet.Model.String(), []string{task.Data.String()}, time.Hour)
 	return
 }
 
@@ -55,7 +55,7 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 
 	// TODO: pull data from storage in the trusted container
 
-	err = w.backend.RunInUntrustedContainer(task.Model.String(), []string{task.Data.String()})
+	err = w.backend.RunInUntrustedContainer(task.Model.String(), task.Model.String(), []string{task.Data.String()}, time.Hour)
 	return
 }
 

@@ -1,5 +1,7 @@
 package dccommon
 
+import "time"
+
 // Abstraction for a Container backend (direct access to Docker/Rkt runtime or
 // use of Swarm/Kubernetes/Mesos/Nomad...)
 //
@@ -12,11 +14,11 @@ package dccommon
 // by a user with limited priviledges (not root :) ).
 type ContainerBackend interface {
 	// Runs the provided command in the trusted container
-	RunInTrustedContainer(command []string) (err error)
+	RunInTrustedContainer(containerName string, command []string, timeout time.Duration) (err error)
 
 	// Runs the provided command in the untrusted container.
 	// The container id to run the command in is used to fetch the container
 	// from storage. Note that we leave the image author the possibility to
 	// override the entrypoint af the Docker image.
-	RunInUntrustedContainer(containerID string, args []string) (err error)
+	RunInUntrustedContainer(containerName string, containerID string, args []string, timeout time.Duration) (err error)
 }
