@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -57,7 +58,7 @@ func main() {
 	app.Adapt(httprouter.New())
 
 	// Logger middleware configuration
-	customLogger := logger.New(logger.ProducerConfig{
+	customLogger := logger.New(logger.Config{
 		Status: true,
 		IP:     true,
 		Method: true,
@@ -124,7 +125,7 @@ func (s *APIServer) postLearnuplet(c *iris.Context) {
 	// API)
 	// TODO: ask storage for the cluster to send the first task to (shouldn't it rather be set by the
 	// orchestrator ?) --> need of a Golang starage API maybe
-	executionClusterURL := "localhost:8080/"
+	executionClusterURL := "http://localhost:8085/learn-task"
 	// TODO: send that damn task to the appropriate compute cluster
 
 	payload, err := json.Marshal(firstTask)
@@ -154,7 +155,7 @@ func (s *APIServer) postLearnuplet(c *iris.Context) {
 	if resp.StatusCode != iris.StatusAccepted {
 		var apiError dccompute.APIError
 		err := json.NewDecoder(c.Request.Body).Decode(&apiError)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			msg := fmt.Sprintf("Failed to parse [%s] JSON response: %s", executionClusterURL, err)
 			log.Printf("[ERROR] %s", msg)
 			c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))

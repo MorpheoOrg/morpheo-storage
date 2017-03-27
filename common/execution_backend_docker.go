@@ -1,3 +1,5 @@
+// TODO: this should be split into a generic interface "ContainerBackend" and
+// two implementations: one for Docker and a similar one for Rkt
 package dccommon
 
 import (
@@ -9,10 +11,11 @@ import (
 	dockerContainer "github.com/docker/docker/api/types/container"
 	dockerNetwork "github.com/docker/docker/api/types/network"
 	dockerCli "github.com/docker/docker/client"
+	uuid "github.com/satori/go.uuid"
 )
 
 type DockerBackend struct {
-	ContainerBackend
+	ExecutionBackend
 
 	daemonURI             string
 	trustedContainerImage string
@@ -31,10 +34,42 @@ func NewDockerBackend(daemonURI string, trustedContainerImage string) (b *Docker
 	}, nil
 }
 
-func (b *DockerBackend) RunInTrustedContainer(containerName string, command []string, timeout time.Duration) error {
+func (b *DockerBackend) Train(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (score float64, err error) {
+	// TODO: implement that
+	return 1.0, nil
+}
+
+func (b *DockerBackend) Test(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (score float64, err error) {
+	// TODO: implement that
+	return 1.0, nil
+}
+
+func (b *DockerBackend) Predict(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (prediction []byte, err error) {
+	// TODO: implement that
+	return []byte("Irma"), nil
+}
+
+// Loads the model's Docker image in a registry accessible by the storage backend container runtime
+// (a local Docker registry here)
+func (b *DockerBackend) LoadModelFromStorage(storage StorageBackend, modelID uuid.UUID) (err error) {
+	// TODO: implement that
+
+	return nil
+}
+
+func (b *DockerBackend) LoadDataFromStorage(storage StorageBackend, dataID uuid.UUID) (err error) {
+	// TODO: implement that
+
+	return nil
+}
+
+func (b *DockerBackend) RunInTrustedContainer(command []string, timeout time.Duration) error {
 	log.Printf("[INFO][docker-backend] Running `%s` in trusted container %s", command, b.trustedContainerImage)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	// TODO: figure out what the f*** we do with that
+	containerName := "trustedPieceOfShit"
 
 	// Let's create the container and run the command in it
 	containerCreateBody, err := b.cli.ContainerCreate(
@@ -90,11 +125,14 @@ func (b *DockerBackend) RunInTrustedContainer(containerName string, command []st
 	return nil
 }
 
-func (b *DockerBackend) RunInUntrustedContainer(containerName string, containerID string, args []string, timeout time.Duration) error {
-	log.Printf("[INFO][docker-backend] Running `%s` in untrusted container %s", args, containerID)
+func (b *DockerBackend) RunInUntrustedContainer(modelID string, args []string, timeout time.Duration) error {
+	log.Printf("[INFO][docker-backend] Running `%s` in untrusted container %s", args, modelID)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	imageName := fmt.Sprintf("modelRegistry/%s", modelID)
+	containerName := fmt.Sprintf("model-%s", modelID)
 
 	// Let's create the container and run the command in it
 	containerCreateBody, err := b.cli.ContainerCreate(
@@ -112,7 +150,7 @@ func (b *DockerBackend) RunInUntrustedContainer(containerName string, containerI
 			Cmd:          args,
 			// TODO: make sure not setting the entrypoint makes Docker use the one defined in the image
 			// TODO: attach a health check ?
-			Image: containerID,
+			Image: imageName,
 			// TODO: volumes
 			WorkingDir:      "/",
 			NetworkDisabled: true,

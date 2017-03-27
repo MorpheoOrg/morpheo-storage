@@ -13,7 +13,8 @@ import (
 )
 
 type Worker struct {
-	backend common.ContainerBackend
+	executionBackend common.ExecutionBackend
+	storageBackend   common.StorageBackend
 }
 
 func (w *Worker) HandleLearn(message []byte) (err error) {
@@ -27,9 +28,15 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 		return common.NewHandlerFatalError(fmt.Errorf("Error in train task: %s -- Body: %s", err, message))
 	}
 
-	// TODO: pull data from storage in the trusted container
+	// Let's pass the learn task to our execution backend
+	score, err := w.executionBackend.Train(w.storageBackend, task.LearnUplet.Model, task.Data)
+	if err != nil {
+		return common.NewHandlerFatalError(fmt.Errorf("Error in train task: %s -- Body: %s", err, message))
+	}
 
-	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), task.LearnUplet.Model.String(), []string{task.Data.String()}, time.Hour)
+	// TODO: update the score (notify the orchestrator ?)
+	log.Printf("Train finished with success. Score %f", score)
+
 	return
 }
 
@@ -40,9 +47,15 @@ func (w *Worker) HandleTest(message []byte) (err error) {
 		return fmt.Errorf("Error un-marshaling test task: %s -- Body: %s", err, message)
 	}
 
-	// TODO: pull data from storage in the trusted container
+	// Let's pass the test task to our execution backend
+	score, err := w.executionBackend.Test(w.storageBackend, task.LearnUplet.Model, task.Data)
+	if err != nil {
+		return common.NewHandlerFatalError(fmt.Errorf("Error in test task: %s -- Body: %s", err, message))
+	}
 
-	err = w.backend.RunInUntrustedContainer(task.LearnUplet.Model.String(), task.LearnUplet.Model.String(), []string{task.Data.String()}, time.Hour)
+	// TODO: update the score (notify the orchestrator ?)
+	log.Printf("Test finished with success. Score %f", score)
+
 	return
 }
 
@@ -53,14 +66,21 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 		return fmt.Errorf("Error un-marshaling pred-uplet: %s -- Body: %s", err, message)
 	}
 
-	// TODO: pull data from storage in the trusted container
+	// Let's pass the prediction task to our execution backend
+	prediction, err := w.executionBackend.Predict(w.storageBackend, task.Model, task.Data)
+	if err != nil {
+		return common.NewHandlerFatalError(fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message))
+	}
 
-	err = w.backend.RunInUntrustedContainer(task.Model.String(), task.Model.String(), []string{task.Data.String()}, time.Hour)
+	// TODO: send the prediction to the viewer, asynchronously
+	log.Printf("Predicition completed with success. Predicition %f", prediction)
+
 	return
 }
 
 func main() {
 	// TODO: improve config and add a -container-backend flag
+	// TODO: add NSQ consumer flags
 	var (
 		lookupUrls           dccompute.MultiStringFlag
 		topic                string
@@ -85,23 +105,27 @@ func main() {
 		log.Panicf("Unknown topic: %s, valid values are %s, %s and %s", topic, dccompute.LearnTopic, dccompute.TestTopic, dccompute.PredictionTopic)
 	}
 
+	// Let's connect with Storage (TODO: replace our mock with the real storage)
+	storageBackend := common.NewStorageAPIMock()
+
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers
-	containerBackend, err := common.NewDockerBackend("file://var/run/docker.sock", trustedImage)
+	executionBackend, err := common.NewDockerBackend("file://var/run/docker.sock", trustedImage)
 	if err != nil {
 		log.Panicf("Impossible to connect to Docker container backend: %s", err)
 	}
 	worker := Worker{
-		backend: containerBackend,
+		executionBackend: executionBackend,
+		storageBackend:   storageBackend,
 	}
 
 	// Let's hook with our consumer
 	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
 
 	// Wire our message handlers
-	consumer.AddHandler("learn", worker.HandleLearn, 2)
-	consumer.AddHandler("test", worker.HandleTest, 1)
-	consumer.AddHandler("pred", worker.HandlePred, 1)
+	consumer.AddHandler(dccompute.LearnTopic, worker.HandleLearn, 2)
+	consumer.AddHandler(dccompute.TestTopic, worker.HandleTest, 1)
+	consumer.AddHandler(dccompute.PredictionTopic, worker.HandlePred, 1)
 
 	// Let's connect to the for real and start pulling tasks
 	consumer.ConsumeUntilKilled()

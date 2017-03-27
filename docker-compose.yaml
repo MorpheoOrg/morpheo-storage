@@ -15,9 +15,11 @@ services:
 
   # DC-Compute: learning consumer
   compute-learning-workers:
-    build: ./nsq-consumer
+    build: ./consumer
     restart: unless-stopped
     command: -lookup-urls nsqlookupd:4161 -topic "train" -channel "compute"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:rw # TODO: Arghh
     networks:
     - internal
     depends_on:
@@ -41,6 +43,7 @@ services:
     networks:
     - internal
 
+  # Nsq Admin frontend
   nsqadmin:
     image: nsqio/nsq:latest
     restart: unless-stopped

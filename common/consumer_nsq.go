@@ -22,6 +22,7 @@ func NewNSQConsumer(lookupUrls []string, channel string, queuePollingInterval ti
 		LookupUrls:           lookupUrls,
 		Channel:              channel,
 		QueuePollingInterval: queuePollingInterval,
+		NsqConsumer:          map[string]*nsq.Consumer{},
 	}
 }
 
@@ -43,18 +44,18 @@ func (c *ConsumerNSQ) ConsumeUntilKilled() {
 
 	// Let's block until all the consumers stop
 	for _, consumer := range c.NsqConsumer {
-		go func() {
-			// Using a channel for this purpose is a bit weird... but why not Bitly guys :)
-			<-consumer.StopChan
-		}()
+		// Using a channel for this purpose is a bit weird... but why not Bitly guys :)
+		<-consumer.StopChan
 	}
 }
 
 func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int) (err error) {
+	log.Printf("Adding %d handler(s) for topic %s.", concurrency, topic)
+	// TODO: create the topic and channel if they don't exist
 	config := nsq.NewConfig()
 	consumer, err := nsq.NewConsumer(topic, c.Channel, config)
 	if err != nil {
-		return fmt.Errorf("Error creating NSQ Consumer for toopic %s: %s", topic, err)
+		return fmt.Errorf("Error creating NSQ Consumer for topic %s: %s", topic, err)
 	}
 	consumer.AddConcurrentHandlers(newHandlerWrapper(handler), concurrency)
 	c.NsqConsumer[topic] = consumer
