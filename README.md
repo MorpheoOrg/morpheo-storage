@@ -18,6 +18,32 @@ different locations).
 The location where a task must be enqueued is determined with a query to
 storage, our single source of truth for locations.
 
+Setup locally
+-------------
+
+You'll need Golang 1.8 (or newer) to be able to build the project. In addition,
+Docker and `doker-compose` (preferably installed via the official Docker repos
+if you're running on a distribution whose Docker packages lag behind) will be
+required (we're planning to ship a Rkt dev. env. in the coming weeks).
+
+### Docker Daemon setup
+
+In order for the consumer to be able to run ML operations (train/test/predict)
+in a separate container, it needs to be able to talk to the Docker deamon.
+Rather than bind-mounting the `/var/lib/docker.sock` (which easily ends up in
+being a permission hell when write access to the socket is required), we require
+that the Docker deamon is accessible via TCP. Please, please, please **read the
+security warning** below or you might regret it for your entire life :)
+
+Check out the [official Docker docs](https://docs.docker.com/engine/admin/#configuring-docker)) for instructions on how to enable TCP access on your daemon.
+Also, it might be relevant to check your OS manual for Docker configuration
+recommendations (ArchLinux rather suggests using a `systemd` drop in for
+instance).
+
+#### Security warning
+
+TODO: iptables configuration
+
 Work queues
 -----------
 
@@ -90,6 +116,8 @@ Interfaces
 
 ## TODO
 
+* Split the common package into a "core" package and an "api" one
+* Integration with the orchestrator and the viewer (and analytics)
 * [configuration management] Use Viper or Cobra
 * Use protobuf (at least internally) instead of JSON ?
 * Keep track of the number of retries for each task and enforce it

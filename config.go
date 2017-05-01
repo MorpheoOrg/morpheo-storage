@@ -8,15 +8,15 @@ import (
 	common "github.com/DeepSee/dc-compute/common"
 )
 
+// Consumer topics: names of the different work queues
 const (
 	PredictionTopic = "prediction"
 	TestTopic       = "test"
 	LearnTopic      = "train"
 )
 
-// Compute API configuration, subject to dynamic changes for the addresses of
-// storage & orchestrator endpoints, and any RESTFul HTTP API added in the
-// future.
+// ProducerConfig Compute API configuration, subject to dynamic changes for the addresses of
+// storage & orchestrator endpoints, and any RESTFul HTTP API added in the future.
 type ProducerConfig struct {
 	Hostname             string
 	Port                 int
@@ -31,15 +31,17 @@ type ProducerConfig struct {
 	lock sync.Mutex
 }
 
-// Returns true if TLS credentials have been provided
+// TLSOn Returns true if TLS credentials have been provided
 func (c *ProducerConfig) TLSOn() bool {
 	return c.CertFile != "" && c.KeyFile != ""
 }
 
+// Locks the config store
 func (c *ProducerConfig) Lock() {
 	c.lock.Lock()
 }
 
+// Allows the config store to be written to
 func (c *ProducerConfig) Unlock() {
 	c.lock.Unlock()
 }

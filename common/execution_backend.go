@@ -11,7 +11,7 @@ import (
 // (like EC2 VMs sharing an EBS volume). However we're only planning on using
 // container based backends (Docker, Rkt and Kubernetes) for now.
 type ExecutionBackend interface {
-	Train(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (score float64, err error)
-	Test(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (score float64, err error)
-	Predict(storage StorageBackend, modelID uuid.UUID, dataID uuid.UUID) (prediction []byte, err error)
+	Train(modelID uuid.UUID, dataID uuid.UUID) (score float64, err error)
+	Test(modelID uuid.UUID, dataID uuid.UUID) (score float64, err error)
+	Predict(modelID uuid.UUID, dataID uuid.UUID) (prediction []byte, err error)
 }

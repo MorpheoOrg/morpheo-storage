@@ -1,5 +1,5 @@
-hash: a63b3a79b3d167957d8985e77bc908f44f2024441ffb834edd907e13d5d09e4b
-updated: 2017-03-23T17:51:42.493569056+01:00
+hash: 5803056bf29a3b5be39857b1e65ca58e906c206ca621850f3d03f29549445eec
+updated: 2017-05-02T04:09:46.672360191+02:00
 imports:
 - name: github.com/BurntSushi/toml
   version: d94612f9fc140360834f9742158c70b5c5b5535b
@@ -132,7 +132,7 @@ imports:
   - internal/modules
   - internal/remote_api
 - name: gopkg.in/kataras/iris.v6
-  version: ebc64d88a489571a01bc2a68e999136366599ce3
+  version: 2f13cd26528d47e516919eb6c94c3e4782e3aa18
   subpackages:
   - adaptors/httprouter
   - middleware/logger

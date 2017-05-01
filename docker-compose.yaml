@@ -14,16 +14,26 @@ services:
     - nsqd
 
   # DC-Compute: learning consumer
-  compute-learning-workers:
+  compute-learning-consumer:
     build: ./consumer
     restart: unless-stopped
+    environment:
+    - "DOCKER_HOST=tcp://dind-executor:2376"
     command: -lookup-urls nsqlookupd:4161 -topic "train" -channel "compute"
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:rw # TODO: Arghh
+    privileged: true
     networks:
     - internal
     depends_on:
     - nsqlookupd
+    - dind-executor
+
+  # Docker-in-Docker container to run untrusted code
+  dind-executor:
+    build: ./utils/dind-daemon
+    restart: unless-stopped
+    privileged: true
+    networks:
+    - internal
 
   # Nsqlookupd: service discovery for Nsqd
   nsqlookupd:

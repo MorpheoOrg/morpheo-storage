@@ -29,7 +29,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	}
 
 	// Let's pass the learn task to our execution backend
-	score, err := w.executionBackend.Train(w.storageBackend, task.LearnUplet.Model, task.Data)
+	score, err := w.executionBackend.Train(task.LearnUplet.Model, task.Data)
 	if err != nil {
 		return common.NewHandlerFatalError(fmt.Errorf("Error in train task: %s -- Body: %s", err, message))
 	}
@@ -48,7 +48,7 @@ func (w *Worker) HandleTest(message []byte) (err error) {
 	}
 
 	// Let's pass the test task to our execution backend
-	score, err := w.executionBackend.Test(w.storageBackend, task.LearnUplet.Model, task.Data)
+	score, err := w.executionBackend.Test(task.LearnUplet.Model, task.Data)
 	if err != nil {
 		return common.NewHandlerFatalError(fmt.Errorf("Error in test task: %s -- Body: %s", err, message))
 	}
@@ -67,7 +67,7 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 	}
 
 	// Let's pass the prediction task to our execution backend
-	prediction, err := w.executionBackend.Predict(w.storageBackend, task.Model, task.Data)
+	prediction, err := w.executionBackend.Predict(task.Model, task.Data)
 	if err != nil {
 		return common.NewHandlerFatalError(fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message))
 	}
@@ -79,20 +79,18 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 }
 
 func main() {
-	// TODO: improve config and add a -container-backend flag
+	// TODO: improve config and add a -container-backend flag and relevant opts
 	// TODO: add NSQ consumer flags
 	var (
 		lookupUrls           dccompute.MultiStringFlag
 		topic                string
 		channel              string
-		trustedImage         string
 		queuePollingInterval time.Duration
 	)
 
 	flag.Var(&lookupUrls, "lookup-urls", "The URLs of the Nsqlookupd instances to fetch our topics from.")
 	flag.StringVar(&topic, "topic", "learn", "The topic of the Nsqd/Nsqlookupd instance to listen to.")
 	flag.StringVar(&channel, "channel", "compute", "The channel to use (default: compute)")
-	flag.StringVar(&trustedImage, "trusted-container-image", "registry.localhost/compute-trusted-sidecar", "URL to pull the trusted container image from")
 	flag.DurationVar(&queuePollingInterval, "lookup-interval", time.Second, "The interval at which nsqlookupd will be polled")
 	flag.Parse()
 
@@ -109,8 +107,8 @@ func main() {
 	storageBackend := common.NewStorageAPIMock()
 
 	// Let's hook to our container backend and create a Worker instance containing
-	// our message handlers
-	executionBackend, err := common.NewDockerBackend("file://var/run/docker.sock", trustedImage)
+	// our message handlers TODO: put data folders in flags
+	executionBackend, err := common.NewDockerBackend("/data")
 	if err != nil {
 		log.Panicf("Impossible to connect to Docker container backend: %s", err)
 	}
@@ -123,9 +121,9 @@ func main() {
 	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
 
 	// Wire our message handlers
-	consumer.AddHandler(dccompute.LearnTopic, worker.HandleLearn, 2)
-	consumer.AddHandler(dccompute.TestTopic, worker.HandleTest, 1)
-	consumer.AddHandler(dccompute.PredictionTopic, worker.HandlePred, 1)
+	consumer.AddHandler(dccompute.LearnTopic, worker.HandleLearn, 1)
+	// consumer.AddHandler(dccompute.TestTopic, worker.HandleTest, 1)
+	// consumer.AddHandler(dccompute.PredictionTopic, worker.HandlePred, 1)
 
 	// Let's connect to the for real and start pulling tasks
 	consumer.ConsumeUntilKilled()

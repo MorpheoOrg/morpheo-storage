@@ -119,7 +119,7 @@ type LearnTask struct {
 
 	Data       uuid.UUID   `json:"data"`
 	Next       *LearnTask  `json:"next"`
-	LearnUplet *LearnUplet `json:learn-uplet`
+	LearnUplet *LearnUplet `json:"learn-uplet"`
 }
 
 func (u *LearnTask) Check() (err error) {

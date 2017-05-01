@@ -51,7 +51,7 @@ func (c *ConsumerNSQ) ConsumeUntilKilled() {
 
 func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int) (err error) {
 	log.Printf("Adding %d handler(s) for topic %s.", concurrency, topic)
-	// TODO: create the topic and channel if they don't exist
+	// Let's add our handler to that (topic, channel) tuple
 	config := nsq.NewConfig()
 	consumer, err := nsq.NewConsumer(topic, c.Channel, config)
 	if err != nil {

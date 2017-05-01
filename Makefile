@@ -25,7 +25,8 @@ iris-api-docker: iris-api
 consumer: deps consumer/main.go
 	@echo "Building the NSQ compute worker (w/ full static linking) using a build container"
 	mkdir -p ./consumer/target
-	docker run -u $$UID -it --rm --workdir "/usr/local/go/src/github.com/DeepSee/dc-compute" -v $${PWD}:/usr/local/go/src/github.com/DeepSee/dc-compute:ro -v $${PWD}/vendor:/vendor/src -v $${PWD}/consumer/target:/target:rw golang:1-onbuild bash -c "GOPATH=$$GOPATH:/vendor CGO_ENABLED=0 GOOS=linux go build --installsuffix cgo --ldflags '-extldflags \"-static\"' -o /target/compute-worker ./consumer/main.go"
+	CGO_ENABLED=0 GOOS=linux go build --installsuffix cgo --ldflags '-extldflags \"-static\"' -o consumer/target/compute-worker consumer/main.go
+	# docker run -u $$UID -it --rm --workdir "/usr/local/go/src/github.com/DeepSee/dc-compute" -v $${PWD}:/usr/local/go/src/github.com/DeepSee/dc-compute:ro -v $${PWD}/vendor:/vendor/src -v $${PWD}/consumer/target:/target:rw golang:1-onbuild bash -c "GOPATH=$$GOPATH:/vendor CGO_ENABLED=0 GOOS=linux go build --installsuffix cgo --ldflags '-extldflags \"-static\"' -o /target/compute-worker ./consumer/main.go"
 
 consumer-docker: consumer
 	@echo "Building the compute worker Docker image"
