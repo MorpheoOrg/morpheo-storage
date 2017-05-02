@@ -1,4 +1,4 @@
-package dccompute
+package common
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package dccommon
+package common
 
 import (
 	"bytes"

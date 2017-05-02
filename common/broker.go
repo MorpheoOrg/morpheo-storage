@@ -1,6 +1,12 @@
-package dccommon
+package common
 
 import "fmt"
+
+// Topics (task queue names) for our broker
+const (
+	TrainTopic   = "train"
+	PredictTopic = "prediction"
+)
 
 // Producer is an abstract interface to a producer (pushes messages to a topic)
 type Producer interface {
@@ -32,7 +38,7 @@ type HandlerFatalError struct {
 }
 
 func (err HandlerFatalError) Error() string {
-	return fmt.Sprintf("Fatal error in handler: %s", err)
+	return fmt.Sprintf("Fatal error in handler: ")
 }
 
 // NewHandlerFatalError builds an HandlerFatalError given an error message

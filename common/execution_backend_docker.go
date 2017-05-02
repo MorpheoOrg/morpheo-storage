@@ -1,4 +1,4 @@
-package dccommon
+package common
 
 import (
 	"context"
@@ -32,14 +32,14 @@ func NewDockerBackend(hostDataFolder string) (b *DockerBackend, err error) {
 
 // Train downloads the data in the appropriate folder, loads the model in the docker daemon, runs
 // the training and testing,
-func (b *DockerBackend) Train(modelID, dataID uuid.UUID) (score float64, err error) {
+func (b *DockerBackend) Train(modelID uuid.UUID, trainDataset, testDataset []uuid.UUID) (score float64, err error) {
 	// TODO: implement that
-	b.runInUntrustedContainer("test", []string{"sleep", "10s"}, 10*time.Second)
+	b.runInUntrustedContainer("test", []string{"echo", "hello"}, 10*time.Second)
 	return 1.0, nil
 }
 
 // Predict runs a prediction task: (down)load data and model and execute predictor
-func (b *DockerBackend) Predict(modelID, dataID uuid.UUID) (prediction []byte, err error) {
+func (b *DockerBackend) Predict(modelID uuid.UUID, dataset []uuid.UUID) (prediction []byte, err error) {
 	// TODO: implement that
 	return []byte(" Irma"), nil
 }
@@ -100,7 +100,6 @@ func (b *DockerBackend) runInUntrustedContainer(containerName string, args []str
 		log.Printf("[WARNING %d][docker-backend] Warning creating container: %s", n, warning)
 	}
 
-	log.Print("La chatte a ta mere")
 	err = apiClient.ContainerStart(
 		ctx,
 		containerCreateBody.ID,

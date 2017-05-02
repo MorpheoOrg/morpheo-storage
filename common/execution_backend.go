@@ -1,4 +1,4 @@
-package dccommon
+package common
 
 import (
 	uuid "github.com/satori/go.uuid"
@@ -11,7 +11,6 @@ import (
 // EBS volume). However we're only planning on using container based backends (Docker & rkt) for
 // now.
 type ExecutionBackend interface {
-	Train(modelID uuid.UUID, dataID []uuid.UUID) (score float64, err error)
-	Test(modelID uuid.UUID, dataID []uuid.UUID) (score float64, err error)
-	Predict(modelID uuid.UUID, dataID []uuid.UUID) (prediction []byte, err error)
+	Train(modelID uuid.UUID, trainDataset, testDataset []uuid.UUID) (score float64, err error)
+	Predict(modelID uuid.UUID, dataset []uuid.UUID) (prediction []byte, err error)
 }

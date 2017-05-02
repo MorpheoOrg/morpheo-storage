@@ -9,8 +9,7 @@ import (
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter" // <--- TODO or adaptors/gorillamux
 	"gopkg.in/kataras/iris.v6/middleware/logger"
 
-	"github.com/DeepSee/dc-compute"
-	common "github.com/DeepSee/dc-compute/common"
+	"github.com/MorpheoOrg/morpheo-compute/common"
 )
 
 // TODO: write tests for the four main views
@@ -24,11 +23,11 @@ const (
 )
 
 type apiServer struct {
-	conf     *dccompute.ProducerConfig
+	conf     *ProducerConfig
 	producer common.Producer
 }
 
-func newAPIServer(conf *dccompute.ProducerConfig, producer common.Producer) (s *apiServer) {
+func newAPIServer(conf *ProducerConfig, producer common.Producer) (s *apiServer) {
 	return &apiServer{
 		conf:     conf,
 		producer: producer,
@@ -44,7 +43,7 @@ func (s *apiServer) configureRoutes(app *iris.Framework) {
 
 func main() {
 	// App-specific config
-	conf := dccompute.NewProducerConfig()
+	conf := NewProducerConfig()
 
 	// Iris setup
 	app := iris.New()
@@ -95,13 +94,13 @@ func (s *apiServer) health(c *iris.Context) {
 }
 
 func (s *apiServer) postLearnuplet(c *iris.Context) {
-	var learnUplet dccompute.LearnUplet
+	var learnUplet common.LearnUplet
 
 	// Unserializing the request body
 	if err := json.NewDecoder(c.Request.Body).Decode(&learnUplet); err != nil {
 		msg := fmt.Sprintf("Error decoding body to JSON: %s", err)
 		log.Printf("[INFO] %s", msg)
-		c.JSON(iris.StatusBadRequest, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(msg))
 		return
 	}
 
@@ -109,7 +108,7 @@ func (s *apiServer) postLearnuplet(c *iris.Context) {
 	if err := learnUplet.Check(); err != nil {
 		msg := fmt.Sprintf("Invalid learn-uplet: %s", err)
 		log.Printf("[INFO] %s", msg)
-		c.JSON(iris.StatusBadRequest, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(msg))
 		return
 	}
 
@@ -118,14 +117,14 @@ func (s *apiServer) postLearnuplet(c *iris.Context) {
 	if err != nil {
 		msg := fmt.Sprintf("Failed to remarshal JSON learn-uplet after validation: %s", err)
 		log.Printf("[ERROR] %s", msg)
-		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(msg))
 		return
 	}
-	err = s.producer.Push(dccompute.LearnTopic, taskBytes)
+	err = s.producer.Push(common.TrainTopic, taskBytes)
 	if err != nil {
 		msg := fmt.Sprintf("Failed push learn-uplet into broker: %s", err)
 		log.Printf("[ERROR] %s", msg)
-		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(msg))
 		return
 	}
 
@@ -137,13 +136,13 @@ func (s *apiServer) postLearnuplet(c *iris.Context) {
 }
 
 func (s *apiServer) postPreduplet(c *iris.Context) {
-	var predUplet dccompute.Preduplet
+	var predUplet common.Preduplet
 
 	// Unserializing the request body
 	if err := json.NewDecoder(c.Request.Body).Decode(&predUplet); err != nil {
 		msg := fmt.Sprintf("Error decoding body to JSON: %s", err)
 		log.Printf("[INFO] %s", msg)
-		c.JSON(iris.StatusBadRequest, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(msg))
 		return
 	}
 
@@ -151,7 +150,7 @@ func (s *apiServer) postPreduplet(c *iris.Context) {
 	if err := predUplet.Check(); err != nil {
 		msg := fmt.Sprintf("Invalid pred-uplet: %s", err)
 		log.Printf("[INFO] %s", msg)
-		c.JSON(iris.StatusBadRequest, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(msg))
 		return
 	}
 
@@ -159,14 +158,14 @@ func (s *apiServer) postPreduplet(c *iris.Context) {
 	if err != nil {
 		msg := fmt.Sprintf("Failed to remarshal preduplet to JSON: %s", err)
 		log.Printf("[ERROR] %s", msg)
-		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(msg))
 		return
 	}
-	err = s.producer.Push(dccompute.PredictionTopic, taskBytes)
+	err = s.producer.Push(common.PredictTopic, taskBytes)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to push preduplet task into broker: %s", err)
 		log.Printf("[ERROR] %s", msg)
-		c.JSON(iris.StatusInternalServerError, dccompute.NewAPIError(msg))
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(msg))
 		return
 	}
 

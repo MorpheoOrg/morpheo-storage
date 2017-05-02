@@ -1,4 +1,4 @@
-package dccommon
+package common
 
 import (
 	"fmt"
@@ -96,6 +96,7 @@ func (c *ConsumerNSQ) ConsumeUntilKilled() {
 // AddHandler adds a handler function (with a tunable level of concurrency) to our NSQ consumer
 func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int) (err error) {
 	log.Printf("Adding %d handler(s) for topic %s.", concurrency, topic)
+
 	// Let's add our handler to that (topic, channel) tuple
 	config := nsq.NewConfig()
 	consumer, err := nsq.NewConsumer(topic, c.Channel, config)

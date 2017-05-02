@@ -8,8 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/DeepSee/dc-compute"
-	common "github.com/DeepSee/dc-compute/common"
+	"github.com/MorpheoOrg/morpheo-compute/common"
 )
 
 // Worker stores references to our chosen backends
@@ -20,20 +19,20 @@ type Worker struct {
 
 // HandleLearn handles learning tasks
 func (w *Worker) HandleLearn(message []byte) (err error) {
-	var task dccompute.LearnTask
+	var task common.LearnUplet
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
 	if err != nil {
-		return common.NewHandlerFatalError(fmt.Errorf("Error un-marshaling train task: %s -- Body: %s", err, message))
+		return fmt.Errorf("Error un-marshaling train task: %s -- Body: %s", err, message)
 	}
 
 	if err = task.Check(); err != nil {
-		return common.NewHandlerFatalError(fmt.Errorf("Error in train task: %s -- Body: %s", err, message))
+		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
 	}
 
 	// Let's pass the learn task to our execution backend
-	score, err := w.executionBackend.Train(task.LearnUplet.Model, task.Data)
+	score, err := w.executionBackend.Train(task.Algo, task.TrainData, task.TestData)
 	if err != nil {
-		return common.NewHandlerFatalError(fmt.Errorf("Error in train task: %s -- Body: %s", err, message))
+		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
 	}
 
 	// TODO: update the score (notify the orchestrator ?)
@@ -44,7 +43,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 
 // HandlePred handles our prediction tasks
 func (w *Worker) HandlePred(message []byte) (err error) {
-	var task dccompute.Preduplet
+	var task common.Preduplet
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
 	if err != nil {
 		return fmt.Errorf("Error un-marshaling pred-uplet: %s -- Body: %s", err, message)
@@ -53,7 +52,7 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 	// Let's pass the prediction task to our execution backend
 	prediction, err := w.executionBackend.Predict(task.Model, task.Data)
 	if err != nil {
-		return common.NewHandlerFatalError(fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message))
+		return fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message)
 	}
 
 	// TODO: send the prediction to the viewer, asynchronously
@@ -66,7 +65,7 @@ func main() {
 	// TODO: improve config and add a -container-backend flag and relevant opts
 	// TODO: add NSQ consumer flags
 	var (
-		lookupUrls           dccompute.MultiStringFlag
+		lookupUrls           common.MultiStringFlag
 		topic                string
 		channel              string
 		queuePollingInterval time.Duration
@@ -75,7 +74,7 @@ func main() {
 	flag.Var(&lookupUrls, "lookup-urls", "The URLs of the Nsqlookupd instances to fetch our topics from.")
 	flag.StringVar(&topic, "topic", "learn", "The topic of the Nsqd/Nsqlookupd instance to listen to.")
 	flag.StringVar(&channel, "channel", "compute", "The channel to use (default: compute)")
-	flag.DurationVar(&queuePollingInterval, "lookup-interval", time.Second, "The interval at which nsqlookupd will be polled")
+	flag.DurationVar(&queuePollingInterval, "lookup-interval", 5*time.Second, "The interval at which nsqlookupd will be polled")
 	flag.Parse()
 
 	// Config check
@@ -83,8 +82,8 @@ func main() {
 		lookupUrls = append(lookupUrls, "nsqlookupd:6460")
 	}
 
-	if topic != dccompute.LearnTopic && topic != dccompute.PredictionTopic && topic != dccompute.TestTopic {
-		log.Panicf("Unknown topic: %s, valid values are %s, %s and %s", topic, dccompute.LearnTopic, dccompute.TestTopic, dccompute.PredictionTopic)
+	if topic != common.TrainTopic && topic != common.PredictTopic {
+		log.Panicf("Unknown topic: %s, valid values are %s and %s", topic, common.TrainTopic, common.PredictTopic)
 	}
 
 	// Let's connect with Storage (TODO: replace our mock with the real storage)
@@ -105,9 +104,8 @@ func main() {
 	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
 
 	// Wire our message handlers
-	consumer.AddHandler(dccompute.LearnTopic, worker.HandleLearn, 1)
-	// consumer.AddHandler(dccompute.TestTopic, worker.HandleTest, 1)
-	// consumer.AddHandler(dccompute.PredictionTopic, worker.HandlePred, 1)
+	consumer.AddHandler(common.TrainTopic, worker.HandleLearn, 1)
+	// consumer.AddHandler(common.PredictTopic, worker.HandlePred, 1)
 
 	// Let's connect to the for real and start pulling tasks
 	consumer.ConsumeUntilKilled()
