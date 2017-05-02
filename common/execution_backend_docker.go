@@ -1,5 +1,3 @@
-// TODO: this should be split into a generic interface "ContainerBackend" and
-// two implementations: one for Docker and a similar one for Rkt
 package dccommon
 
 import (
@@ -15,12 +13,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// DockerBackend implements ExecutionBackend for Docker
 type DockerBackend struct {
 	ExecutionBackend
 
 	HostDataFolder string
 }
 
+// NewDockerBackend creates a new Docker execution backend
 func NewDockerBackend(hostDataFolder string) (b *DockerBackend, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error creating Docker client: %s", err)
@@ -30,23 +30,21 @@ func NewDockerBackend(hostDataFolder string) (b *DockerBackend, err error) {
 	}, nil
 }
 
+// Train downloads the data in the appropriate folder, loads the model in the docker daemon, runs
+// the training and testing,
 func (b *DockerBackend) Train(modelID, dataID uuid.UUID) (score float64, err error) {
 	// TODO: implement that
-	b.RunInUntrustedContainer("test", []string{"sleep", "10s"}, 10*time.Second)
+	b.runInUntrustedContainer("test", []string{"sleep", "10s"}, 10*time.Second)
 	return 1.0, nil
 }
 
-func (b *DockerBackend) Test(modelID, dataID uuid.UUID) (score float64, err error) {
-	// TODO: implement that
-	return 1.0, nil
-}
-
+// Predict runs a prediction task: (down)load data and model and execute predictor
 func (b *DockerBackend) Predict(modelID, dataID uuid.UUID) (prediction []byte, err error) {
 	// TODO: implement that
 	return []byte(" Irma"), nil
 }
 
-func (b *DockerBackend) RunInUntrustedContainer(containerName string, args []string, timeout time.Duration) error {
+func (b *DockerBackend) runInUntrustedContainer(containerName string, args []string, timeout time.Duration) error {
 	log.Printf("[INFO][docker-backend] Running `%s` in untrusted container %s", args, containerName)
 
 	apiClient, err := dockerCli.NewEnvClient()

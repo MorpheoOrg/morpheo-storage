@@ -1,6 +1,6 @@
 default: all
 
-all: iris-api-docker
+all: iris-api-docker consumer-docker
 
 clean:
 	@echo "Dropping the vendor folder"

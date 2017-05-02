@@ -12,11 +12,13 @@ import (
 	common "github.com/DeepSee/dc-compute/common"
 )
 
+// Worker stores references to our chosen backends
 type Worker struct {
 	executionBackend common.ExecutionBackend
 	storageBackend   common.StorageBackend
 }
 
+// HandleLearn handles learning tasks
 func (w *Worker) HandleLearn(message []byte) (err error) {
 	var task dccompute.LearnTask
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
@@ -40,25 +42,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	return
 }
 
-func (w *Worker) HandleTest(message []byte) (err error) {
-	var task dccompute.TestTask
-	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
-	if err != nil {
-		return fmt.Errorf("Error un-marshaling test task: %s -- Body: %s", err, message)
-	}
-
-	// Let's pass the test task to our execution backend
-	score, err := w.executionBackend.Test(task.LearnUplet.Model, task.Data)
-	if err != nil {
-		return common.NewHandlerFatalError(fmt.Errorf("Error in test task: %s -- Body: %s", err, message))
-	}
-
-	// TODO: update the score (notify the orchestrator ?)
-	log.Printf("Test finished with success. Score %f", score)
-
-	return
-}
-
+// HandlePred handles our prediction tasks
 func (w *Worker) HandlePred(message []byte) (err error) {
 	var task dccompute.Preduplet
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
@@ -73,7 +57,7 @@ func (w *Worker) HandlePred(message []byte) (err error) {
 	}
 
 	// TODO: send the prediction to the viewer, asynchronously
-	log.Printf("Predicition completed with success. Predicition %f", prediction)
+	log.Printf("Predicition completed with success. Predicition %s", prediction)
 
 	return
 }
