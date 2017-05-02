@@ -72,9 +72,9 @@ func NewNSQConsumer(lookupUrls []string, channel string, queuePollingInterval ti
 // ConsumeUntilKilled listens for messages on a given NSQ (topic, channel) pair until it's killed
 func (c *ConsumerNSQ) ConsumeUntilKilled() {
 	for _, consumer := range c.NsqConsumer {
-		go func() {
+		go func(nsqConsumer *nsq.Consumer) {
 			for {
-				err := consumer.ConnectToNSQLookupds(c.LookupUrls)
+				err := nsqConsumer.ConnectToNSQLookupds(c.LookupUrls)
 				if err == nil {
 					break
 				}
@@ -83,7 +83,7 @@ func (c *ConsumerNSQ) ConsumeUntilKilled() {
 				time.Sleep(c.QueuePollingInterval)
 			}
 			log.Println("[nsqlookupd] Topic found, let's start consuming messages...")
-		}()
+		}(consumer)
 	}
 
 	// Let's block until all the consumers stop

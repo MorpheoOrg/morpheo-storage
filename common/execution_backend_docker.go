@@ -49,7 +49,8 @@ func (b *DockerBackend) runInUntrustedContainer(containerName string, args []str
 
 	apiClient, err := dockerCli.NewEnvClient()
 
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
 	imageName := "alpine"
 	log.Print("[DEBUG][docker-backend] Docker context created !")
