@@ -18,6 +18,25 @@ different locations).
 The location where a task must be enqueued is determined with a query to
 storage, our single source of truth for locations.
 
+API Spec
+--------
+
+The API is dead simple. It consists in 4 routes, two of them being completely
+trivial:
+ * `GET /`: lists all the routes
+ * `GET /health`: service liveness probe
+ * `POST /pred`: post a preduplet to this route
+ * `POST /learn`: post a learnuplet to this route
+
+The API expects the pred/learn uplets to be posted as JSON strings. Their
+structure is described [here](https://morpheoorg.github.io/morpheo-orchestrator/modules/collections.html).
+
+### Example, using HTTPie, assuming the API is reachable under localhost:8085
+
+```shell
+http POST http://localhost:8085/learn data=$(uuidgen) id=$(uuidgen) problem=$(uuidgen) algo=$(uuidgen) model=$(uuidgen) status=todo train_data:='["a7f75232-696a-4f8f-bc46-21b4406b903e", "a7f75232-696a-4f8f-bc46-21b4406b903e"]' test_data:='["a7f75232-696a-4f8f-bc46-21b4406b903e", "a7f75232-696a-4f8f-bc46-21b4406b903e"]'
+```
+
 Setup locally
 -------------
 

@@ -12,7 +12,7 @@ import (
 	"github.com/MorpheoOrg/morpheo-compute/common"
 )
 
-// TODO: write tests for the four main views
+// TODO: write tests for the two main views
 
 // Available HTTP Routes
 const (
@@ -86,7 +86,7 @@ func main() {
 }
 
 func (s *apiServer) index(c *iris.Context) {
-	c.JSON(iris.StatusOK, []string{"/learn", "/pred", "/learn_task", "/test_task"})
+	c.JSON(iris.StatusOK, []string{rootRoute, healthRoute, learnRoute, predRoute})
 }
 
 func (s *apiServer) health(c *iris.Context) {

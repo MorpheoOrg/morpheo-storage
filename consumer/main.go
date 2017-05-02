@@ -22,7 +22,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	var task common.LearnUplet
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
 	if err != nil {
-		return fmt.Errorf("Error un-marshaling train task: %s -- Body: %s", err, message)
+		return fmt.Errorf("Error un-marshaling learn-uplet: %s -- Body: %s", err, message)
 	}
 
 	if err = task.Check(); err != nil {
