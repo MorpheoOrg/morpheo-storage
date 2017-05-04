@@ -7,6 +7,20 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+// Uplet types
+const (
+	TypeLearnUplet = "learnuplet"
+	TypePredUplet  = "preduplet"
+)
+
+var (
+	// ValidUplets us a set of all possible uplet names
+	ValidUplets = map[string]struct{}{
+		TypeLearnUplet: struct{}{},
+		TypePredUplet:  struct{}{},
+	}
+)
+
 // Task statuses
 const (
 	TaskStatusTodo    = "todo"

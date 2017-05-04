@@ -29,11 +29,11 @@ type Worker struct {
 
 	containerRuntime common.ContainerRuntime
 	storage          common.StorageBackend
-	// TODO: add the orchestrator here and talk with him
+	orchestrator     common.OrchestratorBackend
 }
 
 // NewWorker creates a Worker instance
-func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage common.StorageBackend) *Worker {
+func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage common.StorageBackend, orchestrator common.OrchestratorBackend) *Worker {
 	return &Worker{
 		dataFolder:           dataFolder,
 		trainFolder:          trainFolder,
@@ -45,12 +45,15 @@ func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFo
 
 		containerRuntime: containerRuntime,
 		storage:          storage,
+		orchestrator:     orchestrator,
 	}
 }
 
-// HandleLearn handles learning tasks
+// HandleLearn manages a learning task (orchestrator status updates, etc...)
 func (w *Worker) HandleLearn(message []byte) (err error) {
+	// Unmarshal the learn-uplet
 	var task common.LearnUplet
+
 	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
 	if err != nil {
 		return fmt.Errorf("Error un-marshaling learn-uplet: %s -- Body: %s", err, message)
@@ -60,6 +63,23 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
 	}
 
+	// Update its status to pending on the orchestrator
+	w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusPending, task.ID)
+
+	err = w.LearnWorkflow(task)
+	if err != nil {
+		// TODO: handle fatal and non-fatal errors differently and set learnuplet status to failed only
+		// if the error was fatal
+		w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusFailed, task.ID)
+		return fmt.Errorf("Error in LearnWorkflow: %s", err)
+	}
+	// TODO: set learnuplet status to succeeded
+	w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusDone, task.ID)
+	return nil
+}
+
+// LearnWorkflow implements our learning workflow
+func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	problemWorkflow, err := w.storage.GetProblemWorkflow(task.Problem)
 	defer problemWorkflow.Close()
 	if err != nil {
@@ -71,6 +91,7 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error loading problem workflow image %s in Docker daemon: %s", task.Problem, err)
 	}
+	defer w.containerRuntime.ImageUnload(problemImageName)
 
 	model, err := w.storage.GetModel(task.ModelStart)
 	defer model.Close()
@@ -83,13 +104,28 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error loading model image %s in Docker daemon: %s", modelImageName, err)
 	}
+	defer w.containerRuntime.ImageUnload(modelImageName)
 
 	// Setup directory structure
 	taskDataFolder := fmt.Sprintf("%s/%s", w.dataFolder, task.ModelStart)
 	trainFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.trainFolder)
 	testFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.testFolder)
 	untargetedTestFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.untargetedTestFolder)
-	// TODO: set that up
+	err = os.MkdirAll(trainFolder, os.ModeDir)
+	if err != nil {
+		return fmt.Errorf("Error creating train folder under %s: %s", trainFolder, err)
+	}
+	err = os.MkdirAll(testFolder, os.ModeDir)
+	if err != nil {
+		return fmt.Errorf("Error creating test folder under %s: %s", testFolder, err)
+	}
+	err = os.MkdirAll(untargetedTestFolder, os.ModeDir)
+	if err != nil {
+		return fmt.Errorf("Error creating untargeted test folder under %s: %s", untargetedTestFolder, err)
+	}
+
+	// Let's make sure these folders are wiped out once the task is done/failed
+	defer os.RemoveAll(taskDataFolder)
 
 	// Pulling train dataset
 	for _, dataID := range task.TrainData {
@@ -135,11 +171,11 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	// Let's pass the task to our execution backend, now that everything should be in place
 	containerID, err := w.Train(modelImageName, trainFolder)
 	if err != nil {
-		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
+		return fmt.Errorf("Error in train task: %s -- Body: %s", err, task)
 	}
 	err = w.Predict(modelImageName, untargetedTestFolder)
 	if err != nil {
-		return fmt.Errorf("Error in test task: %s -- Body: %s", err, message)
+		return fmt.Errorf("Error in test task: %s -- Body: %s", err, task)
 	}
 
 	// Let's move test predictions to the test folder with targets
@@ -167,24 +203,20 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 		return fmt.Errorf("Error streaming new model %s to storage: %s", task.ModelEnd, err)
 	}
 
-	// TODO: parse the perf file and notify the orchestrator about it
+	// Let's send the perf file to the orchestrator
+	performanceFilePath := fmt.Sprintf("%s/performance.json", trainFolder)
+	resultFile, err := os.Open(performanceFilePath)
+	if err != nil {
+		return fmt.Errorf("Error reading performance file %s: %s", performanceFilePath, err)
+	}
+	defer resultFile.Close()
+
+	err = w.orchestrator.PostLearnResult(task.ID, resultFile)
+	if err != nil {
+		return fmt.Errorf("Error posting learn result %s to orchestrator: %s", task.ModelEnd, err)
+	}
 
 	log.Printf("[INFO] Train finished with success, cleaning up...")
-
-	err = os.RemoveAll(taskDataFolder)
-	if err != nil {
-		return fmt.Errorf("Error removing data folder %s: %s", taskDataFolder, err)
-	}
-
-	err = w.containerRuntime.ImageUnload(modelImageName)
-	if err != nil {
-		return fmt.Errorf("Error unloading image %s: %s", modelImageName, err)
-	}
-
-	err = w.containerRuntime.ImageUnload(problemImageName)
-	if err != nil {
-		return fmt.Errorf("Error unloading image %s: %s", problemImageName, err)
-	}
 
 	return
 }

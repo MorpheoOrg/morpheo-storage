@@ -10,7 +10,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// Storage routes
+// Storage HTTP API routes
 const (
 	StorageProblemWorkflowRoute = "/problem"
 	StorageModelRoute           = "/algo"
@@ -29,6 +29,8 @@ type StorageBackend interface {
 
 // StorageAPI is a wrapper around our storage HTTP API
 type StorageAPI struct {
+	StorageBackend
+
 	Hostname string
 	Port     int
 }
@@ -36,7 +38,7 @@ type StorageAPI struct {
 func (s *StorageAPI) getObject(prefix string, id uuid.UUID) (dataReader io.ReadCloser, err error) {
 	url := fmt.Sprintf("http://%s:%d%s", s.Hostname, s.Port, prefix)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("[storage-api] Error building GET request against %s: %s", url, err)
 	}
@@ -56,7 +58,7 @@ func (s *StorageAPI) getObject(prefix string, id uuid.UUID) (dataReader io.ReadC
 func (s *StorageAPI) streamObject(prefix string, id uuid.UUID, dataReader io.Reader) error {
 	url := fmt.Sprintf("http://%s:%d%s", s.Hostname, s.Port, prefix)
 
-	req, err := http.NewRequest("POST", url, dataReader)
+	req, err := http.NewRequest(http.MethodPost, url, dataReader)
 	if err != nil {
 		return fmt.Errorf("[storage-api] Error building streaming POST request against %s: %s", url, err)
 	}

@@ -33,8 +33,19 @@ func main() {
 		log.Panicf("[FATAL ERROR] Unknown topic: %s, valid values are %s and %s", topic, common.TrainTopic, common.PredictTopic)
 	}
 
-	// Let's connect with Storage (TODO: replace our mock with the real storage)
-	storageBackend := common.NewStorageAPIMock()
+	// TODO: flags to choose backends or mocks
+
+	// Let's connect with Storage (TODO: flags flags flags)
+	storageBackend := &common.StorageAPI{
+		Hostname: "storage",
+		Port:     80,
+	}
+
+	// And with the orchestrator (TODO: flags flags flags)
+	orchestratorBackend := &common.OrchestratorAPI{
+		Hostname: "orchestrator",
+		Port:     80,
+	}
 
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers
@@ -44,7 +55,18 @@ func main() {
 	}
 
 	// TODO: put these arguments in flags
-	worker := NewWorker("/data", "train", "test", "untargeted_test", "pred", "problem-", "model-", containerRuntime, storageBackend)
+	worker := NewWorker(
+		"/data",
+		"train",
+		"test",
+		"untargeted_test",
+		"pred",
+		"problem-",
+		"model-",
+		containerRuntime,
+		storageBackend,
+		orchestratorBackend,
+	)
 
 	// Let's hook with our consumer
 	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
