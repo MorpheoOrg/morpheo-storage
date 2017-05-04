@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/MorpheoOrg/morpheo-compute/common"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Worker describes a worker (where it stores its data, which container runtime it uses...).
@@ -150,26 +149,25 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	)
 
 	// Let's compute the performance !
-	newModelID := uuid.NewV4()
-	newModelName := fmt.Sprintf("%s-%s", w.modelImagePrefix, newModelID)
+	newModelImageName := fmt.Sprintf("%s-%s", w.modelImagePrefix, task.ModelEnd)
 	err = w.ComputePerf(problemImageName, trainFolder, testFolder)
 	if err != nil {
 		// FIXME: do not return here
-		return fmt.Errorf("Error computing perf for problem %s and model (new) %s: %s", task.Problem, newModelID, err)
+		return fmt.Errorf("Error computing perf for problem %s and model (new) %s: %s", task.Problem, task.ModelEnd, err)
 	}
 
 	// Let's create a new model and post it to storage
-	snapshot, err := w.containerRuntime.SnapshotContainer(containerID, newModelName)
+	snapshot, err := w.containerRuntime.SnapshotContainer(containerID, newModelImageName)
 	if err != nil {
-		return fmt.Errorf("Error snapshotting container %s to image %s: %s", containerID, newModelName, err)
+		return fmt.Errorf("Error snapshotting container %s to image %s: %s", containerID, newModelImageName, err)
 	}
 
-	err = w.storage.PostModel(newModelID, snapshot)
+	err = w.storage.PostModel(task.ModelEnd, snapshot)
 	if err != nil {
-		return fmt.Errorf("Error streaming new model %s to storage: %s", newModelID, err)
+		return fmt.Errorf("Error streaming new model %s to storage: %s", task.ModelEnd, err)
 	}
 
-	// TODO: parse the perf file and notify the orchestrator about it (new model + new perf)
+	// TODO: parse the perf file and notify the orchestrator about it
 
 	log.Printf("[INFO] Train finished with success, cleaning up...")
 

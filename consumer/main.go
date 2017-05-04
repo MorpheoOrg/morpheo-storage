@@ -37,7 +37,7 @@ func main() {
 	storageBackend := common.NewStorageAPIMock()
 
 	// Let's hook to our container backend and create a Worker instance containing
-	// our message handlers TODO: put data folders in flags
+	// our message handlers
 	containerRuntime, err := common.NewDockerRuntime(10 * time.Second)
 	if err != nil {
 		log.Panicf("[FATAL ERROR] Impossible to connect to Docker container backend: %s", err)
@@ -51,6 +51,7 @@ func main() {
 
 	// Wire our message handlers
 	consumer.AddHandler(common.TrainTopic, worker.HandleLearn, 1)
+	// TODO: add the prediction handler too.
 	// consumer.AddHandler(common.PredictTopic, worker.HandlePred, 1)
 
 	// Let's connect to the for real and start pulling tasks
