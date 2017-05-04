@@ -1,65 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/MorpheoOrg/morpheo-compute/common"
 )
-
-// Worker stores references to our chosen backends
-type Worker struct {
-	executionBackend common.ExecutionBackend
-	storageBackend   common.StorageBackend
-}
-
-// HandleLearn handles learning tasks
-func (w *Worker) HandleLearn(message []byte) (err error) {
-	var task common.LearnUplet
-	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
-	if err != nil {
-		return fmt.Errorf("Error un-marshaling learn-uplet: %s -- Body: %s", err, message)
-	}
-
-	if err = task.Check(); err != nil {
-		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
-	}
-
-	// Let's pass the learn task to our execution backend
-	score, err := w.executionBackend.Train(task.Algo, task.TrainData, task.TestData)
-	if err != nil {
-		return fmt.Errorf("Error in train task: %s -- Body: %s", err, message)
-	}
-
-	// TODO: update the score (notify the orchestrator ?)
-	log.Printf("Train finished with success. Score %f", score)
-
-	return
-}
-
-// HandlePred handles our prediction tasks
-func (w *Worker) HandlePred(message []byte) (err error) {
-	var task common.Preduplet
-	err = json.NewDecoder(bytes.NewReader(message)).Decode(&task)
-	if err != nil {
-		return fmt.Errorf("Error un-marshaling pred-uplet: %s -- Body: %s", err, message)
-	}
-
-	// Let's pass the prediction task to our execution backend
-	prediction, err := w.executionBackend.Predict(task.Model, task.Data)
-	if err != nil {
-		return fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message)
-	}
-
-	// TODO: send the prediction to the viewer, asynchronously
-	log.Printf("Predicition completed with success. Predicition %s", prediction)
-
-	return
-}
 
 func main() {
 	// TODO: improve config and add a -container-backend flag and relevant opts
@@ -83,7 +30,7 @@ func main() {
 	}
 
 	if topic != common.TrainTopic && topic != common.PredictTopic {
-		log.Panicf("Unknown topic: %s, valid values are %s and %s", topic, common.TrainTopic, common.PredictTopic)
+		log.Panicf("[FATAL ERROR] Unknown topic: %s, valid values are %s and %s", topic, common.TrainTopic, common.PredictTopic)
 	}
 
 	// Let's connect with Storage (TODO: replace our mock with the real storage)
@@ -91,14 +38,13 @@ func main() {
 
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers TODO: put data folders in flags
-	executionBackend, err := common.NewDockerBackend("/data")
+	containerRuntime, err := common.NewDockerRuntime(10 * time.Second)
 	if err != nil {
-		log.Panicf("Impossible to connect to Docker container backend: %s", err)
+		log.Panicf("[FATAL ERROR] Impossible to connect to Docker container backend: %s", err)
 	}
-	worker := Worker{
-		executionBackend: executionBackend,
-		storageBackend:   storageBackend,
-	}
+
+	// TODO: put these arguments in flags
+	worker := NewWorker("/data", "train", "test", "untargeted_test", "pred", "problem-", "model-", containerRuntime, storageBackend)
 
 	// Let's hook with our consumer
 	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
@@ -110,6 +56,6 @@ func main() {
 	// Let's connect to the for real and start pulling tasks
 	consumer.ConsumeUntilKilled()
 
-	log.Println("Consumer has been gracefully stopped... Bye bye!")
+	log.Println("[INFO] Consumer has been gracefully stopped... Bye bye!")
 	return
 }

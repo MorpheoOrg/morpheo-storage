@@ -31,8 +31,8 @@ type Consumer interface {
 type Handler func(message []byte) error
 
 // HandlerFatalError is a simple wrapper type around fatal handler errors. If a fatal error occurred
-// during the handling of a message, the latter won't be requeued.  TODO: try and unit test the
-// behaviour of this interface
+// during the handling of a message, the latter won't be requeued.
+// TODO: try and unit test the behaviour of this interface
 type HandlerFatalError struct {
 	message string
 }
