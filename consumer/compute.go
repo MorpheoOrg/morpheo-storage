@@ -73,7 +73,6 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 		w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusFailed, task.ID)
 		return fmt.Errorf("Error in LearnWorkflow: %s", err)
 	}
-	// TODO: set learnuplet status to succeeded
 	w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusDone, task.ID)
 	return nil
 }
