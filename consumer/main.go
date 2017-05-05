@@ -13,13 +13,11 @@ func main() {
 	// TODO: add NSQ consumer flags
 	var (
 		lookupUrls           common.MultiStringFlag
-		topic                string
 		channel              string
 		queuePollingInterval time.Duration
 	)
 
 	flag.Var(&lookupUrls, "lookup-urls", "The URLs of the Nsqlookupd instances to fetch our topics from.")
-	flag.StringVar(&topic, "topic", "learn", "The topic of the Nsqd/Nsqlookupd instance to listen to.")
 	flag.StringVar(&channel, "channel", "compute", "The channel to use (default: compute)")
 	flag.DurationVar(&queuePollingInterval, "lookup-interval", 5*time.Second, "The interval at which nsqlookupd will be polled")
 	flag.Parse()
@@ -27,10 +25,6 @@ func main() {
 	// Config check
 	if len(lookupUrls) == 0 {
 		lookupUrls = append(lookupUrls, "nsqlookupd:6460")
-	}
-
-	if topic != common.TrainTopic && topic != common.PredictTopic {
-		log.Panicf("[FATAL ERROR] Unknown topic: %s, valid values are %s and %s", topic, common.TrainTopic, common.PredictTopic)
 	}
 
 	// TODO: flags to choose backends or mocks
