@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/MorpheoOrg/morpheo-compute/common"
+	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
 // Worker describes a worker (where it stores its data, which container runtime it uses...).

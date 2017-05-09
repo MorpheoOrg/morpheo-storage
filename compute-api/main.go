@@ -9,7 +9,7 @@ import (
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter" // <--- TODO or adaptors/gorillamux
 	"gopkg.in/kataras/iris.v6/middleware/logger"
 
-	"github.com/MorpheoOrg/morpheo-compute/common"
+	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
 // TODO: write tests for the two main views
@@ -27,13 +27,6 @@ type apiServer struct {
 	producer common.Producer
 }
 
-func newAPIServer(conf *ProducerConfig, producer common.Producer) (s *apiServer) {
-	return &apiServer{
-		conf:     conf,
-		producer: producer,
-	}
-}
-
 func (s *apiServer) configureRoutes(app *iris.Framework) {
 	app.Get(rootRoute, s.index)
 	app.Get(healthRoute, s.health)
@@ -42,7 +35,7 @@ func (s *apiServer) configureRoutes(app *iris.Framework) {
 }
 
 func main() {
-	// App-specific config
+	// App-specific config (parses CLI flags)
 	conf := NewProducerConfig()
 
 	// Iris setup
@@ -50,7 +43,7 @@ func main() {
 	app.Adapt(iris.DevLogger())
 	app.Adapt(httprouter.New())
 
-	// Logger middleware configuration
+	// Logging middleware configuration
 	customLogger := logger.New(logger.Config{
 		Status: true,
 		IP:     true,
@@ -74,8 +67,11 @@ func main() {
 	}
 
 	// Handlers configuration
-	apiServer := newAPIServer(conf, producer)
-	apiServer.configureRoutes(app)
+	api := &apiServer{
+		conf:     conf,
+		producer: producer,
+	}
+	api.configureRoutes(app)
 
 	// Main server loop
 	if conf.TLSOn() {
@@ -86,6 +82,7 @@ func main() {
 }
 
 func (s *apiServer) index(c *iris.Context) {
+	// TODO: check broker connectivity here
 	c.JSON(iris.StatusOK, []string{rootRoute, healthRoute, learnRoute, predRoute})
 }
 

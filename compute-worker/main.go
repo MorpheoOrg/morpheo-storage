@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/MorpheoOrg/morpheo-compute/common"
+	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
 func main() {

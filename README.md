@@ -1,22 +1,15 @@
-DeemCare - Compute
-==================
+Morpheo-Compute: a container-oriented Machine-Learning job runner
+=================================================================
 
-This repository holds the code for the compute part of the DreemCare project. It
-is essentially written in golang, using the Iris web framework.
+This repository holds the code for the compute part of the Morpheo project. It
+is essentially written in Golang, using the Iris microframework for the API
+part and NSQ as a distributed broker.
 
 TL;DR
 -----
-`dc-compute` receives compute orders (trainings and predictions) from the
-orchestrator. Every time the orchestrator logs a new learn-uplet/pred-uplet in
-the blockchain, it also notifies `dc-compute` so that the corresponding
-learning/prediction job can be run.
-
-`dc-compute` then splits the learn-uplet into a linked list of tasks passed
-around compute clusters (if it needs to run on datasets available only at
-different locations).
-
-The location where a task must be enqueued is determined with a query to
-storage, our single source of truth for locations.
+`compute` receives compute orders (trainings and predictions) from the
+`orchestrator`, fetches problem workflows, models and data from `storage` and
+executes the orders.
 
 API Spec
 --------
@@ -45,25 +38,11 @@ Docker and `doker-compose` (preferably installed via the official Docker repos
 if you're running on a distribution whose Docker packages lag behind) will be
 required (we're planning to ship a Rkt dev. env. in the coming weeks).
 
-### Docker Daemon setup
+### Mocking storage, the orchestrator and the viewer
 
-In order for the consumer to be able to run ML operations (train/test/predict)
-in a separate container, it needs to be able to talk to the Docker deamon.
-Rather than bind-mounting the `/var/lib/docker.sock` (which easily ends up in
-being a permission hell when write access to the socket is required), we require
-that the Docker deamon is accessible via TCP. Please, please, please **read the
-security warning** below or you might regret it for your entire life :)
+ 1. Upload a valid problem workflow on storage
+ 2. Upload a valid model on storage
 
-Check out the [official Docker docs](https://docs.docker.com/engine/admin/#configuring-docker)) for instructions on how to enable TCP access on your daemon.
-Also, it might be relevant to check your OS manual for Docker configuration
-recommendations (ArchLinux rather suggests using a `systemd` drop in for
-instance).
-
-#### Security warning
-
-TODO: iptables configuration
-
-Work queues
 -----------
 
 * Learnuplets
@@ -135,8 +114,8 @@ Interfaces
 
 ## TODO
 
-* Split the common package into a "core" package and an "api" one
-* Integration with the orchestrator and the viewer (and analytics)
-* [configuration management] Use Viper or Cobra
-* Use protobuf (at least internally) instead of JSON ?
+* Split the common package into a "core" package and an "api/client" one
+* Integration with the viewer (and analytics)
+* [configuration management] Use Viper or Cobra ?
 * Keep track of the number of retries for each task and enforce it
+* Rename this repository to `gomorpheo` and reorganize it a bit ?
