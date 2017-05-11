@@ -151,11 +151,23 @@ func main() {
 
 // misc routes
 func (s *apiServer) index(c *iris.Context) {
-	c.JSON(iris.StatusOK, []string{rootRoute, healthRoute, problemRoute, algoRoute, dataRoute})
+	c.JSON(iris.StatusOK, []string{
+		rootRoute,
+		healthRoute,
+		problemListRoute,
+		problemRoute,
+		problemBlobRoute,
+		dataListRoute,
+		dataRoute,
+		dataBlobRoute,
+		algoListRoute,
+		algoRoute,
+		algoBlobRoute,
+	})
 }
 
 func (s *apiServer) health(c *iris.Context) {
-	// TODO: check object store and blob store connectivity here
+	// TODO: check database and blob store connectivity here
 	c.JSON(iris.StatusOK, map[string]string{"status": "ok"})
 }
 

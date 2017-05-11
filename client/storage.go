@@ -1,4 +1,4 @@
-package common
+package client
 
 import (
 	"bytes"
@@ -17,8 +17,8 @@ const (
 	StorageDataRoute            = "/data"
 )
 
-// StorageBackend describes the storage service API
-type StorageBackend interface {
+// Storage describes the storage service API
+type Storage interface {
 	GetData(id uuid.UUID) (dataReader io.ReadCloser, err error)
 	GetModel(id uuid.UUID) (modelReader io.ReadCloser, err error)
 	GetProblemWorkflow(id uuid.UUID) (problemReader io.ReadCloser, err error)
@@ -29,7 +29,7 @@ type StorageBackend interface {
 
 // StorageAPI is a wrapper around our storage HTTP API
 type StorageAPI struct {
-	StorageBackend
+	Storage
 
 	Hostname string
 	Port     int
@@ -107,7 +107,7 @@ func (s *StorageAPI) PostData(id uuid.UUID, dataReader io.Reader) error {
 
 // StorageAPIMock is a mock of the storage API (for tests & local dev. purposes)
 type StorageAPIMock struct {
-	StorageBackend
+	Storage
 
 	evilDataUUID    string
 	evilModelUUID   string

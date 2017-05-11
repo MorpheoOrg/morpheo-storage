@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/MorpheoOrg/go-morpheo/client"
 	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
@@ -30,13 +31,13 @@ func main() {
 	// TODO: flags to choose backends or mocks
 
 	// Let's connect with Storage (TODO: flags flags flags)
-	storageBackend := &common.StorageAPI{
+	storageBackend := &client.StorageAPI{
 		Hostname: "storage",
 		Port:     80,
 	}
 
 	// And with the orchestrator (TODO: flags flags flags)
-	orchestratorBackend := &common.OrchestratorAPI{
+	orchestratorBackend := &client.OrchestratorAPI{
 		Hostname: "orchestrator",
 		Port:     80,
 	}

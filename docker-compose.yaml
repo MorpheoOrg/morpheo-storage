@@ -1,13 +1,13 @@
 version: '2'
 
 services:
-  DC-Compute: producer
+  # DC-Compute: producer
   compute:
     build: ./compute-api
     restart: unless-stopped
-    command: -host 0.0.0.0 -port ${API_PORT} -broker nsq -broker-host nsqd -broker-port 4150
+    command: -host 0.0.0.0 -port ${COMPUTE_PORT} -broker nsq -broker-host nsqd -broker-port 4150
     ports:
-    - "${API_PORT}:${API_PORT}/tcp"
+    - "${COMPUTE_PORT}:${COMPUTE_PORT}/tcp"
     networks:
     - internal
     depends_on:
@@ -67,18 +67,21 @@ services:
   storage:
     build: ./storage-api
     restart: unless-stopped
-    command: -host 0.0.0.0 -port ${API_PORT}
+    command: -host 0.0.0.0 -port ${STORAGE_PORT}
+    ## Stops the container from taking up all the cache memory on big file
+    ## uploads
     mem_limit: 100000000
     memswap_limit: 100000000
     volumes:
     - ./data/storage:/data
     ports:
-    - "${API_PORT}:${API_PORT}/tcp"
+    - "${STORAGE_PORT}:${STORAGE_PORT}/tcp"
     networks:
     - internal
     depends_on:
     - postgres
 
+  # Postgres instance for the storage service
   postgres:
     image: postgres:alpine
     volumes:

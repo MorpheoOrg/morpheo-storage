@@ -1,4 +1,4 @@
-package common
+package client
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/MorpheoOrg/go-morpheo/common"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -17,15 +18,15 @@ const (
 	OrchestratorPredResultRoute   = "/preddone"
 )
 
-// OrchestratorBackend describes Morpheo's orchestrator API
-type OrchestratorBackend interface {
+// Orchestrator describes Morpheo's orchestrator API
+type Orchestrator interface {
 	UpdateUpletStatus(upletType, status string, upletID uuid.UUID) error
 	PostLearnResult(learnupletID uuid.UUID, data io.Reader) error
 }
 
 // OrchestratorAPI is a wrapper around our orchestrator API
 type OrchestratorAPI struct {
-	OrchestratorBackend
+	Orchestrator
 
 	Hostname string
 	Port     int
@@ -33,11 +34,11 @@ type OrchestratorAPI struct {
 
 // UpdateUpletStatus changes the status field of a learnuplet/preduplet
 func (o *OrchestratorAPI) UpdateUpletStatus(upletType string, status string, upletID uuid.UUID) error {
-	if _, ok := ValidUplets[upletType]; !ok {
-		return fmt.Errorf("[orchestrator-api] Uplet type \"%s\" is invalid. Allowed values are %s", upletType, ValidUplets)
+	if _, ok := common.ValidUplets[upletType]; !ok {
+		return fmt.Errorf("[orchestrator-api] Uplet type \"%s\" is invalid. Allowed values are %s", upletType, common.ValidUplets)
 	}
-	if _, ok := ValidStatuses[status]; !ok {
-		return fmt.Errorf("[orchestrator-api] Status \"%s\" is invalid. Allowed values are %s", status, ValidStatuses)
+	if _, ok := common.ValidStatuses[status]; !ok {
+		return fmt.Errorf("[orchestrator-api] Status \"%s\" is invalid. Allowed values are %s", status, common.ValidStatuses)
 	}
 	url := fmt.Sprintf("http://%s:%d%s/%s/%s", o.Hostname, o.Port, OrchestratorStatusUpdateRoute, upletType, upletID)
 

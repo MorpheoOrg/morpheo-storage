@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/MorpheoOrg/go-morpheo/client"
 	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
@@ -19,6 +20,7 @@ import (
 // awesome example: https://github.com/MorpheoOrg/hypnogram-wf
 // The doc also gets there in detail: https://morpheoorg.github.io/morpheo/modules/learning.html
 type Worker struct {
+	// Worker configuration variables
 	dataFolder           string
 	trainFolder          string
 	testFolder           string
@@ -27,13 +29,16 @@ type Worker struct {
 	problemImagePrefix   string
 	modelImagePrefix     string
 
+	// ContainerRuntime abstractions
 	containerRuntime common.ContainerRuntime
-	storage          common.StorageBackend
-	orchestrator     common.OrchestratorBackend
+
+	// Morpheo API clients
+	storage      client.Storage
+	orchestrator client.Orchestrator
 }
 
 // NewWorker creates a Worker instance
-func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage common.StorageBackend, orchestrator common.OrchestratorBackend) *Worker {
+func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage client.Storage, orchestrator client.Orchestrator) *Worker {
 	return &Worker{
 		dataFolder:           dataFolder,
 		trainFolder:          trainFolder,
