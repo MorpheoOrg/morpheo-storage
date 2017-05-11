@@ -1,9 +1,9 @@
-version: '3'
+version: '2'
 
 services:
-  # DC-Compute: producer
+  DC-Compute: producer
   compute:
-    build: ./iris-api
+    build: ./compute-api
     restart: unless-stopped
     command: -host 0.0.0.0 -port ${API_PORT} -broker nsq -broker-host nsqd -broker-port 4150
     ports:
@@ -15,7 +15,7 @@ services:
 
   # DC-Compute: learning consumer
   compute-learning-consumer:
-    build: ./consumer
+    build: ./compute-worker
     restart: unless-stopped
     environment:
     - "DOCKER_HOST=tcp://dind-executor:2376"
@@ -62,6 +62,33 @@ services:
     - internal
     ports:
     - "4171:4171/tcp"
+
+  # Storage
+  storage:
+    build: ./storage-api
+    restart: unless-stopped
+    command: -host 0.0.0.0 -port ${API_PORT}
+    mem_limit: 100000000
+    memswap_limit: 100000000
+    volumes:
+    - ./data/storage:/data
+    ports:
+    - "${API_PORT}:${API_PORT}/tcp"
+    networks:
+    - internal
+    depends_on:
+    - postgres
+
+  postgres:
+    image: postgres:alpine
+    volumes:
+    - ./data/postgres:/var/lib/postgres
+    environment:
+    - POSTGRES_PASSWORD=tooshort
+    - POSTGRES_USER=storage
+    - POSTGRES_DB=morpheo
+    networks:
+      - internal
 
 networks:
   # Accessible from the outside (a mock of what some call "the Internet")

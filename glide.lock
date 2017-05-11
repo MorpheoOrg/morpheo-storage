@@ -1,5 +1,5 @@
-hash: 5803056bf29a3b5be39857b1e65ca58e906c206ca621850f3d03f29549445eec
-updated: 2017-05-02T04:09:46.672360191+02:00
+hash: 4a8f88637ae1848a96415be7e18ac6e7739a166007e1fcfc7af242181f244bec
+updated: 2017-05-11T17:49:26.841617493+02:00
 imports:
 - name: github.com/BurntSushi/toml
   version: d94612f9fc140360834f9742158c70b5c5b5535b
@@ -62,6 +62,10 @@ imports:
   version: 50d4dbd4eb0e84778abe37cefef140271d96fade
 - name: github.com/iris-contrib/formBinder
   version: 81b6a071e35797b83562caf4b3cad24dc01912dc
+- name: github.com/jmoiron/sqlx
+  version: d9bd385d68c068f1fabb5057e3dedcbcbb039d0f
+  subpackages:
+  - reflectx
 - name: github.com/kataras/go-errors
   version: 6fb46ef666f60ce19b5cc73906d531645d5bf8bc
 - name: github.com/klauspost/compress
@@ -74,6 +78,10 @@ imports:
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/crc32
   version: 1bab8b35b6bb565f92cbc97939610af9369f942a
+- name: github.com/lib/pq
+  version: 2704adc878c21e1329f46f6e56a1c387d788ff94
+  subpackages:
+  - oid
 - name: github.com/microcosm-cc/bluemonday
   version: e79763773ab6222ca1d5a7cbd9d62d83c1f77081
 - name: github.com/Microsoft/go-winio
@@ -88,6 +96,10 @@ imports:
   version: aa2ec055abd10d26d539eb630a92241b781ce4bc
 - name: github.com/pkg/errors
   version: ff09b135c25aae272398c51a07235b90a75aa4f0
+- name: github.com/rubenv/sql-migrate
+  version: 38004e7a77f2b350ea8467038dca66073d907725
+  subpackages:
+  - sqlparse
 - name: github.com/russross/blackfriday
   version: 5f33e7b7878355cd2b7e6b8eefc48a5472c69f70
 - name: github.com/satori/go.uuid
@@ -131,6 +143,8 @@ imports:
   - internal/log
   - internal/modules
   - internal/remote_api
+- name: gopkg.in/gorp.v1
+  version: c87af80f3cc5036b55b83d77171e156791085e2e
 - name: gopkg.in/kataras/iris.v6
   version: 2f13cd26528d47e516919eb6c94c3e4782e3aa18
   subpackages:

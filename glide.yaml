@@ -1,19 +1,28 @@
 package: github.com/DeepSee/dc-compute
 import:
-- package: github.com/nsqio/go-nsq
-  version: ^1.0.6
-- package: github.com/satori/go.uuid
-  version: ^1.1.0
-- package: github.com/docker/docker
-  subpackages:
-  - client
-  - api/types
+# Iris Web micro-framework
 - package: gopkg.in/kataras/iris.v6
   version: ^6.0.0
   subpackages:
   - adaptors/httprouter
   - middleware/logger
-- package: golang.org/x/crypto
+
+# UUID type and utils
+- package: github.com/satori/go.uuid
+  version: ^1.1.0
+
+# Bitly's NSQ Broker
+- package: github.com/nsqio/go-nsq
+  version: ^1.0.6
+
+# SQL libraries (Jason's client & RubEnv's migration tool)
+- package: github.com/jmoiron/sqlx
+- package: github.com/lib/pq
+- package: github.com/rubenv/sql-migrate
+
+# Docker client for the compute workers
+- package: github.com/docker/docker
   subpackages:
-  - acme
-  - acme/autocert
+  - client
+  - api/types
+

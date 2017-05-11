@@ -53,7 +53,7 @@ type Preduplet struct {
 
 	ID             uuid.UUID   `json:"uuid"`
 	Problem        uuid.UUID   `json:"problem"`
-	Model          uuid.UUID   `json:"model"` // @camillemarini: what's the diff. between model and algo ?
+	Model          uuid.UUID   `json:"model"`
 	Data           []uuid.UUID `json:"data"`
 	Worker         uuid.UUID   `json:"worker"`
 	Status         string      `json:"status"`
@@ -165,6 +165,11 @@ func NewAPIError(message string) (err *APIError) {
 	}
 }
 
+// Error returns the error message as a string
+func (err *APIError) Error() string {
+	return err.Message
+}
+
 // TaskError describes an error happening in the consumer that indicates the errord task can be
 // retried (if the retry limit hasn't been reached)
 type TaskError struct {
@@ -182,4 +187,83 @@ type FatalTaskError struct {
 
 func (e *FatalTaskError) Error() string {
 	return e.Message
+}
+
+// Storage specific types
+
+// Blob defines an abstract blob of data
+type Blob struct {
+	ID        uuid.UUID `json:"uuid" db:"uuid"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+func (b *Blob) fillNewBlob() {
+	b.ID = uuid.NewV4()
+	b.CreatedAt = time.Now()
+}
+
+// Problem defines a problem blob (should be a .tar.gz containing a Dockerfile)
+type Problem struct {
+	Blob
+
+	Author uuid.UUID `json:"author" db:"author"`
+}
+
+// NewProblem creates a problem instance
+func NewProblem() *Problem {
+	problem := &Problem{
+		Author: uuid.NewV4(),
+	}
+	problem.fillNewBlob()
+	return problem
+}
+
+// Check returns nil for now
+func (p *Problem) Check() error {
+	// TODO: check what should be
+	return nil
+}
+
+// Algo defines an algorithm blob (should be a .tar.gz containing a Dockerfile)
+type Algo struct {
+	Blob
+
+	Author uuid.UUID `json:"author" db:"author"`
+}
+
+// NewAlgo creates a problem instance
+func NewAlgo() *Algo {
+	algo := &Algo{
+		Author: uuid.NewV4(),
+	}
+	algo.fillNewBlob()
+	return algo
+}
+
+// Check returns nil for now
+func (a *Algo) Check() error {
+	// TODO: check what should be
+	return nil
+}
+
+// Data defines a data blob (should be a .tar.gz)
+type Data struct {
+	Blob
+
+	Owner uuid.UUID `json:"owner" db:"owner"`
+}
+
+// NewData creates a problem instance
+func NewData() *Data {
+	data := &Data{
+		Owner: uuid.NewV4(),
+	}
+	data.fillNewBlob()
+	return data
+}
+
+// Check returns nil for now
+func (d *Data) Check() error {
+	// TODO: check what should be
+	return nil
 }
