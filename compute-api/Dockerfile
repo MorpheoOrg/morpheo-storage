@@ -1,4 +1,4 @@
 FROM scratch
 
-ADD target/compute-api /
+ADD build/target /compute-api
 ENTRYPOINT ["/compute-api"]

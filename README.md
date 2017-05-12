@@ -25,7 +25,7 @@ Local dev. environment
 ### Requirements
 
 * `docker`, `docker-compose` and `make` (we're using docker containers to build
-  and run our Golang services)
+  and run our Golang services). Oh and yeah, you'll obviously need `git` too :)
 
 ### Building
 
@@ -35,10 +35,11 @@ Local dev. environment
 * All `docker` images `make all-docker`
 * A given image: `make [compute-api-docker|compute-worker-docker|storage-api-docker]`
 
-### Build and run local dev. environment
+### Build, run update & destroy local dev. environment, in two commands
 
 ```shell
-make dev
+make devenv-start   # To run on every code change to update the dev. env.
+make devenv-clean   # To run when you want to wipe the dev. env. out
 ```
 
 This launches the `compute` API on port `8081`, the `storage` API on port `8082`

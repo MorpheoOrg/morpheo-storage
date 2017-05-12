@@ -1,4 +1,4 @@
-package: github.com/DeepSee/dc-compute
+package: github.com/MorpheoOrg/go-morpheo
 import:
 # Iris Web micro-framework
 - package: gopkg.in/kataras/iris.v6

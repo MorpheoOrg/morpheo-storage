@@ -1,4 +1,4 @@
 FROM scratch
 
-ADD target/compute-worker /compute-worker
+ADD build/target /compute-worker
 ENTRYPOINT ["/compute-worker"]

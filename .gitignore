@@ -16,7 +16,7 @@
 
 # Glide deps and build targets
 vendor/
-target/
+build/
 
 # Vim
 # swap

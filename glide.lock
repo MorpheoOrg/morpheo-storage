@@ -1,5 +1,5 @@
-hash: 4a8f88637ae1848a96415be7e18ac6e7739a166007e1fcfc7af242181f244bec
-updated: 2017-05-11T17:49:26.841617493+02:00
+hash: 18b417d031a5fd20d4a5eabfd73f820260b1c662c72518b9efd44e2fc901350f
+updated: 2017-05-12T18:39:10.268467309+02:00
 imports:
 - name: github.com/BurntSushi/toml
   version: d94612f9fc140360834f9742158c70b5c5b5535b
@@ -146,7 +146,7 @@ imports:
 - name: gopkg.in/gorp.v1
   version: c87af80f3cc5036b55b83d77171e156791085e2e
 - name: gopkg.in/kataras/iris.v6
-  version: 2f13cd26528d47e516919eb6c94c3e4782e3aa18
+  version: 8ec1b96a7250b5e2dc46e7a90cd3a7c79678bfcf
   subpackages:
   - adaptors/httprouter
   - middleware/logger
