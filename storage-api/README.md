@@ -25,16 +25,33 @@ CLI Arguments
 -------------
 
 ```
-Usage of ./target/storage-api:
+Usage of ./storage-api/target/storage-api:
 
   -cert string
     	The TLS certs to serve to clients (leave blank for no TLS)
+  -data-dir string
+    	The directory to store blob data under (default: /data). Note that this only applies when using local storage (default "/data")
+  -db-host string
+    	The hostname of the postgres database (default: postgres) (default "postgres")
+  -db-migrations-dir string
+    	The database migrations directory (default: /migrations) (default "/migrations")
+  -db-name string
+    	The database name (default: morpheo_storage) (default "morpheo_storage")
+  -db-pass string
+    	The database password to use (default: tooshort) (default "tooshort")
+  -db-port int
+    	The database port (default 5432)
+  -db-rollback
+    	if true, rolls back the last migration (default: false)
+  -db-user string
+    	The database user (default: storage) (default "storage")
   -host string
     	The hostname our server will be listening on (default "0.0.0.0")
   -key string
     	The TLS key used to encrypt connection (leave blank for no TLS)
   -port int
-    	The port our storage API will be listening on (default 8000)
+    	The port our compute API will be listening on (default 8000)
+
 ```
 
 API Specification

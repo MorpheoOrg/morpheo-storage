@@ -100,15 +100,18 @@ func main() {
 	})
 	app.Use(customLogger)
 
-	// TODO: configure both blob storage and object storage with flags
-	db, err := sqlx.Connect("postgres", "user=storage password=tooshort host=postgres port=5432 sslmode=disable dbname=morpheo")
+	db, err := sqlx.Connect(
+		"postgres",
+		fmt.Sprintf(
+			"user=%s password=%s host=%s port=%d sslmode=disable dbname=%s",
+			conf.DBUser, conf.DBPass, conf.DBHost, conf.DBPort, conf.DBName,
+		),
+	)
 	if err != nil {
 		log.Fatalf("Cannot open connection to database: %s", err)
 	}
-	log.Println("Database connection ready")
 
-	// Apply migrations (TODO: migrations dir in flag + rollback flag)
-	n, err := runMigrations(db, "/migrations", false)
+	n, err := runMigrations(db, conf.DBMigrationsDir, conf.DBRollback)
 	if err != nil {
 		log.Fatalf("Cannot apply database migrations: %s", err)
 	}
@@ -132,8 +135,9 @@ func main() {
 
 	api := &apiServer{
 		conf: conf,
+		// TODO: implement S3 storage and use a CLI flag to set the blobStore to use
 		blobStore: &common.LocalBlobStore{
-			DataDir: "./data",
+			DataDir: conf.DataDir,
 		},
 		problemModel: problemModel,
 		algoModel:    algoModel,
