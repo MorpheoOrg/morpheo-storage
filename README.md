@@ -35,38 +35,23 @@ Local dev. environment
 * All `docker` images `make all-docker`
 * A given image: `make [compute-api-docker|compute-worker-docker|storage-api-docker]`
 
-### Launching locally after a build, using `docker-compose`
+### Build and run local dev. environment
 
 ```shell
-make all-bin && STORAGE_PORT=8081 COMPUTE_PORT=8082 docker-compose up -d --build
+make dev
 ```
 
-Key features
-------------
-* Distributed by design: the API (producer)
-* Cloud Native: even though running `dc-compute` on classical architectures is
-  possible and easy too, it is really aimed at being ran in a Cloud-Native
-  environment. DC-Compute's task producers and consumers are **stateless** and
-  can therefore be scaled horizontally with no side effects. The broker between
-  them however, isn't (since its purpose is to store the system's state that
-  would be tricky to achieve :) ).
-* Broker-agnostic: even though only RabbitMQ is supported for now, the borker
-  layer has been completely abstracted.
-* Computation-backend agnostic: three backend are planned for now: Kubernetes,
-  Docker and Rkt (directly on the worker's host). As long as consumers can run
-  shell commands and put the predictor/training data as well as retrieve the
-  learning/prediction artifact file on it, a new computation backend is
-  possible.
-* Secure: The ML jobs are, for the training part at least, code we don't
-  necessarily have access to. Therefore, it is run in containers that have a
-  very limited access to the host machine (strong `seccomp` restrictions are
-  applied on the running container, it has no network interface...).
+This launches the `compute` API on port `8081`, the `storage` API on port `8082`
+and the NSQ broker admin interface on port `8085`.
+
+You can simply run this everytime you change some Go code and your dev. env.
+should be automatically updated :)
 
 ## TODO
 
 * Integration with the viewer (and analytics)
 * [configuration management] Use Viper or Cobra ?
-* Retry policies for our tasks depending on the source of the error
+* Complete our mock suite and write an extensive unit test suite
 
 Maintainers
 -----------

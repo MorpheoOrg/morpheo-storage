@@ -4,6 +4,9 @@ all-bin: compute-api compute-worker storage-api
 
 all-docker: compute-api-docker compute-worker-docker storage-api-docker
 
+dev: all-bin
+	STORAGE_PORT=8081 COMPUTE_PORT=8082 NSQ_ADMIN_PORT=8085 docker-compose up -d --build
+
 clean:
 	@echo "Dropping the vendor folder"
 	rm -rf ./vendor

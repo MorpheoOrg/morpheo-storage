@@ -1,10 +1,12 @@
 version: '2'
 
 services:
-  # DC-Compute: producer
+  # Compute: HTTP API and task producer
   compute:
     build: ./compute-api
     restart: unless-stopped
+    mem_limit: 50000000
+    memswap_limit: 0
     command: -host 0.0.0.0 -port ${COMPUTE_PORT} -broker nsq -broker-host nsqd -broker-port 4150
     ports:
     - "${COMPUTE_PORT}:${COMPUTE_PORT}/tcp"
@@ -13,13 +15,15 @@ services:
     depends_on:
     - nsqd
 
-  # DC-Compute: learning consumer
-  compute-learning-consumer:
+  # Compute: task consumer
+  compute-worker:
     build: ./compute-worker
     restart: unless-stopped
+    mem_limit: 50000000
+    memswap_limit: 0
     environment:
     - "DOCKER_HOST=tcp://dind-executor:2376"
-    command: -lookup-urls nsqlookupd:4161 -topic "train" -channel "compute"
+    command: -lookup-urls nsqlookupd:4161 -channel "compute"
     privileged: true
     networks:
     - internal
@@ -30,6 +34,8 @@ services:
   # Docker-in-Docker container to run untrusted code
   dind-executor:
     build: ./utils/dind-daemon
+    mem_limit: 1000000000
+    memswap_limit: 0
     restart: unless-stopped
     privileged: true
     networks:
@@ -38,6 +44,8 @@ services:
   # Nsqlookupd: service discovery for Nsqd
   nsqlookupd:
     image: nsqio/nsq:latest
+    mem_limit: 50000000
+    memswap_limit: 0
     restart: unless-stopped
     command: /nsqlookupd
     networks:
@@ -48,6 +56,8 @@ services:
   # Nsqd: the distributed broker
   nsqd:
     image: nsqio/nsq:latest
+    mem_limit: 50000000
+    memswap_limit: 0
     restart: unless-stopped
     command: /nsqd --lookupd-tcp-address="nsqlookupd:4160"
     networks:
@@ -56,6 +66,8 @@ services:
   # Nsq Admin frontend
   nsqadmin:
     image: nsqio/nsq:latest
+    mem_limit: 50000000
+    memswap_limit: 0
     restart: unless-stopped
     command: /nsqadmin --lookupd-http-address="nsqlookupd:4161"
     networks:
@@ -84,12 +96,14 @@ services:
   # Postgres instance for the storage service
   postgres:
     image: postgres:alpine
+    mem_limit: 200000000
+    memswap_limit: 0
     volumes:
     - ./data/postgres:/var/lib/postgres
     environment:
     - POSTGRES_PASSWORD=tooshort
     - POSTGRES_USER=storage
-    - POSTGRES_DB=morpheo
+    - POSTGRES_DB=morpheo_storage
     networks:
       - internal
 

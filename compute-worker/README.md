@@ -29,6 +29,10 @@ Usage of ./target/compute-worker:
     	The URLs of the Nsqlookupd instances to fetch our topics from.
 ```
 
+### TODO
+
+* Retry policies for our tasks depending on the source of the error
+
 Maintainers
 -----------
 * Étienne Lafarge <etienne@rythm.co>
