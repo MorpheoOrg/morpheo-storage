@@ -96,7 +96,7 @@ func (u *Preduplet) Check() (err error) {
 type LearnUplet struct {
 	Checkable
 
-	ID             uuid.UUID   `json:"id"`
+	ID             uuid.UUID   `json:"uuid"`
 	Problem        uuid.UUID   `json:"problem"`
 	TrainData      []uuid.UUID `json:"train_data"`
 	TestData       []uuid.UUID `json:"test_data"`

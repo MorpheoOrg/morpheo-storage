@@ -44,7 +44,8 @@ func main() {
 
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers
-	containerRuntime, err := common.NewDockerRuntime(10 * time.Second)
+	// TODO timeout in a flag
+	containerRuntime, err := common.NewDockerRuntime(600 * time.Second)
 	if err != nil {
 		log.Panicf("[FATAL ERROR] Impossible to connect to Docker container backend: %s", err)
 	}
@@ -56,8 +57,8 @@ func main() {
 		"test",
 		"untargeted_test",
 		"pred",
-		"problem-",
-		"model-",
+		"problem",
+		"model",
 		containerRuntime,
 		storageBackend,
 		orchestratorBackend,

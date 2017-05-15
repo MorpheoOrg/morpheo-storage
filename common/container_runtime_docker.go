@@ -36,6 +36,28 @@ func NewDockerRuntime(timeout time.Duration) (b *DockerRuntime, err error) {
 	}, nil
 }
 
+// ImageBuild builds a Docker image from a given build context. The context actually simply is a tar
+// archive of a folder containing a Dockerfile and all the files required to build that Dockerfile.
+//
+// Note that it is up to the caller to call Close() on the returned io.ReadCloser()
+func (r *DockerRuntime) ImageBuild(name string, buildContext io.Reader) (image io.ReadCloser, err error) {
+	dockerImage, err := r.docker.ImageBuild(context.Background(), buildContext, dockerTypes.ImageBuildOptions{
+		Tags:           []string{name},
+		SuppressOutput: false,
+		NoCache:        false,
+		Remove:         true,
+		ForceRemove:    true,
+		PullParent:     true,
+		// TODO: investigate this a bit too
+		// Isolation: "",
+		// NetworkMode    string
+	})
+	if err != nil {
+		return nil, fmt.Errorf("[docker-runtime] Error building image %s: %s", name, err)
+	}
+	return dockerImage.Body, nil
+}
+
 // ImageLoad loads an image from a file into the Docker daemon (equivalent to the "docker load"
 // command)
 func (r *DockerRuntime) ImageLoad(name string, imageReader io.Reader) error {
@@ -105,10 +127,6 @@ func (r *DockerRuntime) RunImageInUntrustedContainer(imageName string, args []st
 		},
 		&dockerContainer.HostConfig{
 			AutoRemove: autoRemove,
-			RestartPolicy: dockerContainer.RestartPolicy{
-				Name:              "never",
-				MaximumRetryCount: 0,
-			},
 			Privileged: false,
 			Binds:      binds,
 			// TODO: investigate all capabilites and set capadd/capdrops accordingly

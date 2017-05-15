@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -56,6 +57,7 @@ func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFo
 
 // HandleLearn manages a learning task (orchestrator status updates, etc...)
 func (w *Worker) HandleLearn(message []byte) (err error) {
+
 	// Unmarshal the learn-uplet
 	var task common.LearnUplet
 
@@ -78,17 +80,18 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 		w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusFailed, task.ID)
 		return fmt.Errorf("Error in LearnWorkflow: %s", err)
 	}
+
 	w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusDone, task.ID)
 	return nil
 }
 
 // LearnWorkflow implements our learning workflow
 func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
-	problemWorkflow, err := w.storage.GetProblemWorkflow(task.Problem)
-	defer problemWorkflow.Close()
+	problemWorkflow, err := w.storage.GetProblemWorkflowBlob(task.Problem)
 	if err != nil {
 		return fmt.Errorf("Error pulling problem workflow %s from storage: %s", task.Problem, err)
 	}
+	defer problemWorkflow.Close()
 
 	problemImageName := fmt.Sprintf("%s-%s", w.problemImagePrefix, task.Problem)
 	err = w.ProblemWorkflowImageLoad(problemImageName, problemWorkflow)
@@ -97,11 +100,11 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	}
 	defer w.containerRuntime.ImageUnload(problemImageName)
 
-	model, err := w.storage.GetModel(task.ModelStart)
-	defer model.Close()
+	model, err := w.storage.GetAlgoBlob(task.ModelStart)
 	if err != nil {
 		return fmt.Errorf("Error pulling model %s from storage: %s", task.ModelStart, err)
 	}
+	defer model.Close()
 
 	modelImageName := fmt.Sprintf("%s-%s", w.modelImagePrefix, task.ModelStart)
 	err = w.ModelImageLoad(modelImageName, model)
@@ -133,7 +136,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 
 	// Pulling train dataset
 	for _, dataID := range task.TrainData {
-		data, err := w.storage.GetData(dataID)
+		data, err := w.storage.GetDataBlob(dataID)
 		if err != nil {
 			return fmt.Errorf("Error pulling train dataset %s from storage: %s", dataID, err)
 		}
@@ -152,7 +155,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 
 	// And the test data
 	for _, dataID := range task.TestData {
-		data, err := w.storage.GetData(dataID)
+		data, err := w.storage.GetDataBlob(dataID)
 		if err != nil {
 			return fmt.Errorf("Error pulling test dataset %s from storage: %s", dataID, err)
 		}
@@ -202,7 +205,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 		return fmt.Errorf("Error snapshotting container %s to image %s: %s", containerID, newModelImageName, err)
 	}
 
-	err = w.storage.PostModel(task.ModelEnd, snapshot)
+	err = w.storage.PostAlgo(task.ModelEnd, snapshot)
 	if err != nil {
 		return fmt.Errorf("Error streaming new model %s to storage: %s", task.ModelEnd, err)
 	}
@@ -248,12 +251,36 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 // ProblemWorkflowImageLoad loads the docker image corresponding to a problem workflow in the Docker
 // daemon that will then run this problem workflow
 func (w *Worker) ProblemWorkflowImageLoad(problemImage string, imageReader io.Reader) error {
-	return w.containerRuntime.ImageLoad(problemImage, imageReader)
+	imageTarReader, err := gzip.NewReader(imageReader)
+	if err != nil {
+		return fmt.Errorf("Error un-gzipping problem workflow image %s: %s", problemImage, err)
+	}
+	// defer imageTarReader.Close()
+
+	image, err := w.containerRuntime.ImageBuild(problemImage, imageTarReader)
+	if err != nil {
+		return fmt.Errorf("Error building problem workflow image %s: %s", problemImage, err)
+	}
+	// defer image.Close()
+
+	return w.containerRuntime.ImageLoad(problemImage, image)
 }
 
 // ModelImageLoad loads the Docker image corresponding to a given model
 func (w *Worker) ModelImageLoad(modelImage string, imageReader io.Reader) error {
-	return w.containerRuntime.ImageLoad(modelImage, imageReader)
+	imageTarReader, err := gzip.NewReader(imageReader)
+	if err != nil {
+		return fmt.Errorf("Error un-gzipping model image %s: %s", modelImage, err)
+	}
+	defer imageTarReader.Close()
+
+	image, err := w.containerRuntime.ImageBuild(modelImage, imageTarReader)
+	if err != nil {
+		return fmt.Errorf("Error building model image %s: %s", modelImage, err)
+	}
+	defer image.Close()
+
+	return w.containerRuntime.ImageLoad(modelImage, image)
 }
 
 // UntargetTestingVolume copies data from /<host-data-volume>/<model>/data to
