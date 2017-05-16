@@ -170,7 +170,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	}
 
 	// Let's remove targets from the test data
-	err = w.UntargetTestingVolume(problemImageName, testFolder, untargetedTestFolder)
+	_, err = w.UntargetTestingVolume(problemImageName, testFolder, untargetedTestFolder)
 	if err != nil {
 		return fmt.Errorf("Error preparing problem %s for %s: %s", task.Problem, task.ModelStart, err)
 	}
@@ -180,7 +180,8 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error in train task: %s -- Body: %s", err, task)
 	}
-	err = w.Predict(modelImageName, untargetedTestFolder)
+
+	_, err = w.Predict(modelImageName, untargetedTestFolder)
 	if err != nil {
 		return fmt.Errorf("Error in test task: %s -- Body: %s", err, task)
 	}
@@ -193,7 +194,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 
 	// Let's compute the performance !
 	newModelImageName := fmt.Sprintf("%s-%s", w.modelImagePrefix, task.ModelEnd)
-	err = w.ComputePerf(problemImageName, trainFolder, testFolder)
+	_, err = w.ComputePerf(problemImageName, trainFolder, testFolder)
 	if err != nil {
 		// FIXME: do not return here
 		return fmt.Errorf("Error computing perf for problem %s and model (new) %s: %s", task.Problem, task.ModelEnd, err)
@@ -286,15 +287,14 @@ func (w *Worker) ModelImageLoad(modelImage string, imageReader io.Reader) error 
 // UntargetTestingVolume copies data from /<host-data-volume>/<model>/data to
 // /<host-data-volume>/<model>/train and removes targets from test files... using the problem
 // workflow container.
-func (w *Worker) UntargetTestingVolume(problemImage, testFolder, untargetedTestFolder string) error {
-	_, err := w.containerRuntime.RunImageInUntrustedContainer(
+func (w *Worker) UntargetTestingVolume(problemImage, testFolder, untargetedTestFolder string) (containerID string, err error) {
+	return w.containerRuntime.RunImageInUntrustedContainer(
 		problemImage,
 		[]string{"-T", "detarget", "-o", "/true_data", "-p", "/pred_data"},
 		map[string]string{
 			testFolder:           "/true_data",
 			untargetedTestFolder: "/pred_data",
 		}, true)
-	return err
 }
 
 // Train launches the submission container's train routines
@@ -308,24 +308,22 @@ func (w *Worker) Train(modelImage, trainFolder string) (containerID string, err 
 }
 
 // Predict launches the submission container's predict routines
-func (w *Worker) Predict(modelImage, testFolder string) error {
-	_, err := w.containerRuntime.RunImageInUntrustedContainer(
+func (w *Worker) Predict(modelImage, testFolder string) (containerID string, err error) {
+	return w.containerRuntime.RunImageInUntrustedContainer(
 		modelImage,
 		[]string{"-V", "/data", "-T", "predict"},
 		map[string]string{
 			testFolder: "/true_data",
 		}, true)
-	return err
 }
 
 // ComputePerf analyses the prediction folders and computes a score for the model
-func (w *Worker) ComputePerf(problemImage, trainFolder, testFolder string) error {
-	_, err := w.containerRuntime.RunImageInUntrustedContainer(
+func (w *Worker) ComputePerf(problemImage, trainFolder, testFolder string) (containerID string, err error) {
+	return w.containerRuntime.RunImageInUntrustedContainer(
 		problemImage,
 		[]string{"-T", "perf", "-o", "/true_data", "-p", "/pred_data"},
 		map[string]string{
 			trainFolder: "/true_data",
 			testFolder:  "/pred_data",
 		}, true)
-	return err
 }

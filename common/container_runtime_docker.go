@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	dockerTypes "github.com/docker/docker/api/types"
@@ -126,7 +127,7 @@ func (r *DockerRuntime) RunImageInUntrustedContainer(imageName string, args []st
 			// Shell
 		},
 		&dockerContainer.HostConfig{
-			AutoRemove: autoRemove,
+			AutoRemove: false,
 			Privileged: false,
 			Binds:      binds,
 			// TODO: investigate all capabilites and set capadd/capdrops accordingly
@@ -152,13 +153,52 @@ func (r *DockerRuntime) RunImageInUntrustedContainer(imageName string, args []st
 		dockerTypes.ContainerStartOptions{},
 	)
 	if err != nil {
-		return "", fmt.Errorf("Error starting Docker container %s: %s", containerName, err)
+		return "", fmt.Errorf("Error starting Docker container %s: %s", containerCreateBody.ID, err)
 	}
+
+	// Defer the container removal if that was asked before
+	defer (func() {
+		if autoRemove {
+			err = r.docker.ContainerRemove(ctx, containerCreateBody.ID, dockerTypes.ContainerRemoveOptions{
+				Force:         true,
+				RemoveVolumes: true,
+			})
+			if err != nil {
+				log.Printf("[ERROR][docker-backend] Error removing container %s: %s", containerCreateBody.ID, err)
+			}
+		}
+	})()
 
 	// Let's wait for the command to be over
 	status, err := r.docker.ContainerWait(ctx, containerCreateBody.ID)
 	if err != nil {
 		return "", fmt.Errorf("Error waiting for untrusted container to exit: %s", err)
+	}
+
+	logs, err := r.docker.ContainerLogs(
+		ctx,
+		containerCreateBody.ID,
+		dockerTypes.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Follow:     true,
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("Error fetching container %s logs: %s", containerCreateBody.ID, err)
+	}
+	defer logs.Close()
+	fmt.Println("----- Container logs -----")
+	io.Copy(os.Stdout, logs)
+
+	containerInfo, err := r.docker.ContainerInspect(ctx, containerCreateBody.ID)
+	if err != nil {
+		return "", fmt.Errorf("Error inspecting container %s: %s", containerCreateBody.ID, err)
+	}
+
+	// TODO: extensive check suite on container Exit State (could be OOMKilled as well)
+	if containerInfo.State.ExitCode != 0 {
+		return "", fmt.Errorf("Container exited with error code %d", containerInfo.State.ExitCode)
 	}
 
 	log.Printf("[INFO][docker-backend] Untrusted container ran command, status code: %d", status)
