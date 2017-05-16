@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/MorpheoOrg/go-morpheo/client"
 	"github.com/MorpheoOrg/go-morpheo/common"
@@ -114,10 +115,10 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	defer w.containerRuntime.ImageUnload(modelImageName)
 
 	// Setup directory structure
-	taskDataFolder := fmt.Sprintf("%s/%s", w.dataFolder, task.ModelStart)
-	trainFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.trainFolder)
-	testFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.testFolder)
-	untargetedTestFolder := fmt.Sprintf("%s/%s/%s", taskDataFolder, w.untargetedTestFolder)
+	taskDataFolder := filepath.Join(w.dataFolder, task.ModelStart.String())
+	trainFolder := filepath.Join(taskDataFolder, w.trainFolder)
+	testFolder := filepath.Join(taskDataFolder, w.testFolder)
+	untargetedTestFolder := filepath.Join(taskDataFolder, w.untargetedTestFolder)
 	err = os.MkdirAll(trainFolder, os.ModeDir)
 	if err != nil {
 		return fmt.Errorf("Error creating train folder under %s: %s", trainFolder, err)

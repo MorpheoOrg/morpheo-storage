@@ -27,6 +27,8 @@ services:
     privileged: true
     networks:
     - internal
+    volumes:
+    - compute_datadir:/data
     depends_on:
     - nsqlookupd
     - dind-executor
@@ -39,6 +41,8 @@ services:
     restart: unless-stopped
     privileged: true
     command: --host tcp://0.0.0.0:2376
+    volumes:
+    - compute_datadir:/data
     networks:
     - internal
 
@@ -112,3 +116,7 @@ networks:
   # Accessible from the outside (a mock of what some call "the Internet")
   internal:
     driver: bridge
+
+volumes:
+  compute_datadir:
+    driver: local

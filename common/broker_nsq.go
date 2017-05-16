@@ -123,8 +123,9 @@ func newHandlerWrapper(handler Handler) *handlerWrapper {
 
 func (hw *handlerWrapper) HandleMessage(message *nsq.Message) (err error) {
 	err = hw.handler(message.Body)
-	if _, fatal := err.(HandlerFatalError); fatal {
-		message.Finish()
-	}
-	return
+	// TODO: smart backoff strategy
+	// if _, fatal := err.(HandlerFatalError); fatal {
+	message.Finish()
+	// }
+	return err
 }
