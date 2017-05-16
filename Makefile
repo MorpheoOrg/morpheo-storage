@@ -1,6 +1,6 @@
 # (Containerized) build commands
 BUILD_CONTAINER = \
-  docker run -u $$UID -it --rm \
+  docker run -u $(shell id -u) -it --rm \
 	  --workdir "/usr/local/go/src/github.com/MorpheoOrg/go-morpheo" \
 	  -v $${PWD}:/usr/local/go/src/github.com/MorpheoOrg/go-morpheo:ro \
 	  -v $${PWD}/vendor:/vendor/src \
