@@ -56,6 +56,8 @@ devenv-start: all-bin
 	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose up -d --build
 devenv-clean:
 	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose down
+devenv-logs:
+	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose logs --follow storage compute compute-worker orchestrator dind-executor
 
 # Dependency-related rules
 vendor: glide.yaml

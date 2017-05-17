@@ -32,6 +32,8 @@ services:
     depends_on:
     - nsqlookupd
     - dind-executor
+    - orchestrator
+    - storage
 
   # Docker-in-Docker container to run untrusted code
   dind-executor:
@@ -119,8 +121,16 @@ services:
     memswap_limit: 0
     links:
     - mongodb
+    entrypoint: ""
+    command:
+    - gunicorn
+    - --config
+    - gunicorn_config.py
+    - api:app
     ports:
     - "${ORCHESTRATOR_PORT}:80/tcp"
+    networks:
+    - internal
     environment:
     - MONGO_HOST=mongodb
     - CORS=True
@@ -131,6 +141,8 @@ services:
     image: mongo:3.4
     mem_limit: 200000000
     memswap_limit: 0
+    networks:
+    - internal
     volumes:
     - ./data:/data/db
 
