@@ -53,9 +53,9 @@ all-docker-clean: $(DOCKER_IMAGES_CLEAN_TARGETS)
 
 ## Development environment build, launch & teardown targets
 devenv-start: all-bin
-	STORAGE_PORT=8081 COMPUTE_PORT=8082 NSQ_ADMIN_PORT=8085 docker-compose up -d --build
+	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose up -d --build
 devenv-clean:
-	STORAGE_PORT=8081 COMPUTE_PORT=8082 NSQ_ADMIN_PORT=8085 docker-compose down
+	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose down
 
 # Dependency-related rules
 vendor: glide.yaml

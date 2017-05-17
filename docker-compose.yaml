@@ -112,6 +112,28 @@ services:
     networks:
       - internal
 
+  # Orchestrator
+  orchestrator:
+    image: registry.morpheo.io/orchestrator:latest
+    mem_limit: 100000000
+    memswap_limit: 0
+    links:
+    - mongodb
+    ports:
+    - "${ORCHESTRATOR_PORT}:80/tcp"
+    environment:
+    - MONGO_HOST=mongodb
+    - CORS=True
+    - LISTEN_PORT=80
+
+  # MongoDB instance for the orchestrator
+  mongodb:
+    image: mongo:3.4
+    mem_limit: 200000000
+    memswap_limit: 0
+    volumes:
+    - ./data:/data/db
+
 networks:
   # Accessible from the outside (a mock of what some call "the Internet")
   internal:
