@@ -12,6 +12,7 @@ const (
 	ProblemModelName = "problem"
 	AlgoModelName    = "algo"
 	DataModelName    = "data"
+	ModelModelName   = "model"
 )
 
 const (
@@ -24,16 +25,19 @@ var (
 	insertStatements = map[string]string{
 		"problem": `INSERT INTO problem (uuid, created_at, author) VALUES (:uuid, :created_at, :author)`,
 		"algo":    `INSERT INTO algo (uuid, created_at, author) VALUES (:uuid, :created_at, :author)`,
+		"model":   `INSERT INTO model (uuid, algo, created_at, author) VALUES (:uuid, :algo, :created_at, :author)`,
 		"data":    `INSERT INTO data (uuid, created_at, owner) VALUES (:uuid, :created_at, :owner)`,
 	}
 	selectTemplates = map[string]string{
 		"problem": "SELECT uuid, created_at, author FROM problem ORDER BY created_at DESC LIMIT %d OFFSET %d",
 		"algo":    "SELECT uuid, created_at, author FROM algo ORDER BY created_at DESC LIMIT %d OFFSET %d",
+		"model":   "SELECT uuid, algo, created_at, author FROM model ORDER BY created_at DESC LIMIT %d OFFSET %d",
 		"data":    "SELECT uuid, created_at, owner FROM data ORDER BY created_at DESC LIMIT %d OFFSET %d",
 	}
 	getOneStatements = map[string]string{
 		"problem": `SELECT uuid, created_at, author FROM problem WHERE uuid=$1 LIMIT 1`,
 		"algo":    `SELECT uuid, created_at, author FROM algo WHERE uuid=$1 LIMIT 1`,
+		"model":   `SELECT uuid, algo, created_at, author FROM model WHERE uuid=$1 LIMIT 1`,
 		"data":    `SELECT uuid, created_at, owner FROM data WHERE uuid=$1 LIMIT 1`,
 	}
 
@@ -42,6 +46,7 @@ var (
 		ProblemModelName: struct{}{},
 		AlgoModelName:    struct{}{},
 		DataModelName:    struct{}{},
+		ModelModelName:   struct{}{},
 	}
 )
 

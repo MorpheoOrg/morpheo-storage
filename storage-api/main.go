@@ -30,6 +30,9 @@ const (
 	algoListRoute    = "/algo"
 	algoRoute        = "/algo/:uuid"
 	algoBlobRoute    = "/algo/:uuid/blob"
+	modelListRoute   = "/model"
+	modelRoute       = "/model/:uuid"
+	modelBlobRoute   = "/model/:uuid/blob"
 )
 
 type apiServer struct {
@@ -37,6 +40,7 @@ type apiServer struct {
 	blobStore    common.BlobStore
 	problemModel *Model
 	algoModel    *Model
+	modelModel   *Model
 	dataModel    *Model
 }
 
@@ -56,6 +60,12 @@ func (s *apiServer) configureRoutes(app *iris.Framework) {
 	app.Post(algoListRoute, s.postAlgo)
 	app.Get(algoRoute, s.getAlgo)
 	app.Get(algoBlobRoute, s.getAlgoBlob)
+
+	// Model
+	app.Get(modelListRoute, s.getModelList)
+	app.Post(modelListRoute, s.postModel)
+	app.Get(modelRoute, s.getModel)
+	app.Get(modelBlobRoute, s.getModelBlob)
 
 	// Data
 	app.Get(dataListRoute, s.getDataList)
@@ -128,6 +138,11 @@ func main() {
 		log.Fatalf("Cannot create model %s: %s", AlgoModelName, err)
 	}
 
+	modelModel, err := NewModel(db, ModelModelName)
+	if err != nil {
+		log.Fatalf("Cannot create model %s: %s", ModelModelName, err)
+	}
+
 	dataModel, err := NewModel(db, DataModelName)
 	if err != nil {
 		log.Fatalf("Cannot create model %s: %s", DataModelName, err)
@@ -141,6 +156,7 @@ func main() {
 		},
 		problemModel: problemModel,
 		algoModel:    algoModel,
+		modelModel:   modelModel,
 		dataModel:    dataModel,
 	}
 	api.configureRoutes(app)
@@ -167,6 +183,9 @@ func (s *apiServer) index(c *iris.Context) {
 		algoListRoute,
 		algoRoute,
 		algoBlobRoute,
+		modelListRoute,
+		modelRoute,
+		modelBlobRoute,
 	})
 }
 
@@ -286,11 +305,12 @@ func (s *apiServer) getProblemBlob(c *iris.Context) {
 	s.streamBlobFromStorage("problem", c)
 }
 
+// Algorithm related routes
 func (s *apiServer) getAlgoList(c *iris.Context) {
 	algos := make([]common.Algo, 0, 30)
 	err := s.algoModel.List(&algos, 0, 30)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving problem list: %s", err)))
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving algo list: %s", err)))
 		return
 	}
 
@@ -349,6 +369,77 @@ func (s *apiServer) getAlgoBlob(c *iris.Context) {
 	s.streamBlobFromStorage("algo", c)
 }
 
+// Model related routes
+func (s *apiServer) getModelList(c *iris.Context) {
+	models := make([]common.Model, 0, 30)
+	err := s.algoModel.List(&models, 0, 30)
+	if err != nil {
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving model list: %s", err)))
+		return
+	}
+
+	c.JSON(iris.StatusOK, map[string]interface{}{
+		"page":   0,
+		"length": len(models),
+		"items":  models,
+	})
+}
+
+func (s *apiServer) postModel(c *iris.Context) {
+	algo, err := s.getAlgoInstance(c.URLParam("algo"))
+	if err != nil {
+		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error uploading model: algorithm %s not found: %s", c.Param("algo"), err)))
+		return
+	}
+
+	model := common.NewModel(algo)
+	err = s.streamBlobToStorage("model", model.ID, c)
+	if err != nil {
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error uploading model %s: %s", model.ID, err)))
+		return
+	}
+	err = s.modelModel.Insert(model)
+	if err != nil {
+		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting model %s in database: %s", model.ID, err)))
+	}
+	c.JSON(iris.StatusCreated, map[string]string{"status": "model created", "uuid": model.ID.String()})
+}
+
+func (s *apiServer) getModelInstance(idString string) (*common.Model, error) {
+	id, err := uuid.FromString(idString)
+	if err != nil {
+		return nil, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", idString, err))
+	}
+
+	model := common.Model{}
+	err = s.algoModel.GetOne(&model, id)
+	if err != nil {
+		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", id, err))
+	}
+	return &model, nil
+}
+
+func (s *apiServer) getModel(c *iris.Context) {
+	model, err := s.getModelInstance(c.Param("uuid"))
+	if err != nil {
+		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	c.JSON(iris.StatusOK, model)
+}
+
+func (s *apiServer) getModelBlob(c *iris.Context) {
+	_, err := s.getModelInstance(c.Param("uuid"))
+	if err != nil {
+		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	s.streamBlobFromStorage("model", c)
+}
+
+// Data related routes
 func (s *apiServer) getDataList(c *iris.Context) {
 	datas := make([]common.Data, 0, 30)
 	err := s.dataModel.List(&datas, 0, 30)

@@ -16,6 +16,7 @@ import (
 const (
 	StorageProblemWorkflowRoute = "problem"
 	StorageAlgoRoute            = "algo"
+	StorageModelRoute           = "model"
 	StorageDataRoute            = "data"
 	BlobSuffix                  = "blob"
 )
@@ -24,12 +25,15 @@ const (
 type Storage interface {
 	GetData(id uuid.UUID) (data *common.Data, err error)
 	GetAlgo(id uuid.UUID) (algo *common.Algo, err error)
+	GetModel(id uuid.UUID) (model *common.Model, err error)
 	GetProblemWorkflow(id uuid.UUID) (problem *common.Problem, err error)
 	GetDataBlob(id uuid.UUID) (dataReader io.ReadCloser, err error)
 	GetAlgoBlob(id uuid.UUID) (algoReader io.ReadCloser, err error)
+	GetModelBlob(id uuid.UUID) (modelReader io.ReadCloser, err error)
 	GetProblemWorkflowBlob(id uuid.UUID) (problemReader io.ReadCloser, err error)
 	PostData(id uuid.UUID, dataReader io.Reader) error
 	PostAlgo(id uuid.UUID, algoReader io.Reader) error
+	PostModel(model *common.Model, algoReader io.Reader) error
 	PostProblemWorkflow(id uuid.UUID, problemReader io.Reader) error
 }
 
@@ -118,6 +122,12 @@ func (s *StorageAPI) GetAlgo(id uuid.UUID) (algo *common.Algo, err error) {
 	return
 }
 
+// GetModel returns a Model's metadata
+func (s *StorageAPI) GetModel(id uuid.UUID) (model *common.Model, err error) {
+	err = s.getAndParseJSONObject(StorageModelRoute, id, model)
+	return
+}
+
 // GetData returns a dataset's metadata
 func (s *StorageAPI) GetData(id uuid.UUID) (data *common.Data, err error) {
 	err = s.getAndParseJSONObject(StorageDataRoute, id, data)
@@ -125,17 +135,30 @@ func (s *StorageAPI) GetData(id uuid.UUID) (data *common.Data, err error) {
 }
 
 // GetProblemWorkflowBlob returns an io.ReadCloser to a problem workflow image
+//
+// Note that it is up to the caller to call Close() on the returned io.ReadCloser
 func (s *StorageAPI) GetProblemWorkflowBlob(id uuid.UUID) (dataReader io.ReadCloser, err error) {
 	return s.getObjectBlob(StorageProblemWorkflowRoute, id)
 }
 
 // GetAlgoBlob returns an io.ReadCloser to a algo image (a .tar.gz file of the image's build
 // context)
+//
+// Note that it is up to the caller to call Close() on the returned io.ReadCloser
 func (s *StorageAPI) GetAlgoBlob(id uuid.UUID) (dataReader io.ReadCloser, err error) {
 	return s.getObjectBlob(StorageAlgoRoute, id)
 }
 
+// GetModelBlob returns an io.ReadCloser to a model (a .tar.gz of the model volume)
+//
+// Note that it is up to the caller to call Close() on the returned io.ReadCloser
+func (s *StorageAPI) GetModelBlob(id uuid.UUID) (dataReader io.ReadCloser, err error) {
+	return s.getObjectBlob(StorageModelRoute, id)
+}
+
 // GetDataBlob returns an io.ReadCloser to a data image (a .tar.gz file of the dataset)
+//
+// Note that it is up to the caller to call Close() on the returned io.ReadCloser
 func (s *StorageAPI) GetDataBlob(id uuid.UUID) (dataReader io.ReadCloser, err error) {
 	return s.getObjectBlob(StorageDataRoute, id)
 }
@@ -149,6 +172,16 @@ func (s *StorageAPI) PostProblemWorkflow(id uuid.UUID, problemReader io.Reader) 
 // PostAlgo returns an io.ReadCloser to a algo image
 func (s *StorageAPI) PostAlgo(id uuid.UUID, algoReader io.Reader) error {
 	return s.postObjectBlob(StorageAlgoRoute, id, algoReader)
+}
+
+// PostModel returns an io.ReadCloser to a model
+func (s *StorageAPI) PostModel(model *common.Model, modelReader io.Reader) error {
+	// Check for associated Algo existence
+	if _, err := s.GetAlgo(model.Algo); err != nil {
+		return fmt.Errorf("Algorithm %s associated to posted model wasn't found", model.Algo)
+	}
+
+	return s.postObjectBlob(fmt.Sprintf("%s?algo=%s", StorageModelRoute, model.Algo), model.ID, modelReader)
 }
 
 // PostData returns an io.ReadCloser to a data image

@@ -231,7 +231,7 @@ type Algo struct {
 	Author uuid.UUID `json:"author" db:"author"`
 }
 
-// NewAlgo creates a problem instance
+// NewAlgo creates an Algo instance
 func NewAlgo() *Algo {
 	algo := &Algo{
 		Author: uuid.NewV4(),
@@ -246,7 +246,31 @@ func (a *Algo) Check() error {
 	return nil
 }
 
-// Data defines a data blob (should be a .tar.gz)
+// Model defines a model blob (should be a .tar.gz of the model folder)
+type Model struct {
+	Blob
+
+	Algo   uuid.UUID `json:"algo" db:"algo"`
+	Author uuid.UUID `json:"author" db:"author"`
+}
+
+// NewModel creates a model instance
+func NewModel(algo *Algo) *Model {
+	model := &Model{
+		Algo:   algo.ID,
+		Author: uuid.NewV4(),
+	}
+	model.fillNewBlob()
+	return model
+}
+
+// Check returns nil for now
+func (m *Model) Check() error {
+	// TODO: check what should be
+	return nil
+}
+
+// Data defines a data blob
 type Data struct {
 	Blob
 
