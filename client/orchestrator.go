@@ -64,7 +64,7 @@ func (o *OrchestratorAPI) UpdateUpletStatus(upletType string, status string, upl
 }
 
 func (o *OrchestratorAPI) postData(route string, upletID uuid.UUID, data io.Reader) error {
-	url := fmt.Sprintf("http://%s:%d%s/%s/%s", o.Hostname, o.Port, route, upletID)
+	url := fmt.Sprintf("http://%s:%d%s/%s", o.Hostname, o.Port, route, upletID)
 
 	req, err := http.NewRequest(http.MethodPost, url, data)
 	if err != nil {

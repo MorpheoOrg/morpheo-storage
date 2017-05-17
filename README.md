@@ -1,9 +1,10 @@
 Morpheo-Compute: a container-oriented Machine-Learning job runner
 =================================================================
 
-This repository holds the code for the compute part of the Morpheo project. It
-is essentially written in Golang, using the Iris microframework for the API
-part and NSQ as a distributed broker.
+This repository holds the Golang code for the core of the morpheo project. It
+contains the code for our storage API (which is simply a frontend API for a blob
+storage such as a hard drive or Amazon S3, targeted at storing problem and
+algorithms as containers and data files as... files :)
 
 TL;DR
 -----

@@ -27,6 +27,7 @@ type Worker struct {
 	trainFolder          string
 	testFolder           string
 	untargetedTestFolder string
+	modelFolder          string
 	predFolder           string
 	problemImagePrefix   string
 	modelImagePrefix     string
@@ -40,13 +41,14 @@ type Worker struct {
 }
 
 // NewWorker creates a Worker instance
-func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage client.Storage, orchestrator client.Orchestrator) *Worker {
+func NewWorker(dataFolder, trainFolder, testFolder, untargetedTestFolder, predFolder, modelFolder, problemImagePrefix, modelImagePrefix string, containerRuntime common.ContainerRuntime, storage client.Storage, orchestrator client.Orchestrator) *Worker {
 	return &Worker{
 		dataFolder:           dataFolder,
 		trainFolder:          trainFolder,
 		testFolder:           testFolder,
 		predFolder:           predFolder,
 		untargetedTestFolder: untargetedTestFolder,
+		modelFolder:          modelFolder,
 		problemImagePrefix:   problemImagePrefix,
 		modelImagePrefix:     modelImagePrefix,
 
@@ -119,6 +121,7 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	trainFolder := filepath.Join(taskDataFolder, w.trainFolder)
 	testFolder := filepath.Join(taskDataFolder, w.testFolder)
 	untargetedTestFolder := filepath.Join(taskDataFolder, w.untargetedTestFolder)
+	modelFolder := filepath.Join(taskDataFolder, w.modelFolder)
 	err = os.MkdirAll(trainFolder, os.ModeDir)
 	if err != nil {
 		return fmt.Errorf("Error creating train folder under %s: %s", trainFolder, err)
@@ -130,6 +133,10 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	err = os.MkdirAll(untargetedTestFolder, os.ModeDir)
 	if err != nil {
 		return fmt.Errorf("Error creating untargeted test folder under %s: %s", untargetedTestFolder, err)
+	}
+	err = os.MkdirAll(modelFolder, os.ModeDir)
+	if err != nil {
+		return fmt.Errorf("Error creating model folder under %s: %s", untargetedTestFolder, err)
 	}
 
 	// Let's make sure these folders are wiped out once the task is done/failed
@@ -177,14 +184,9 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	}
 
 	// Let's pass the task to our execution backend, now that everything should be in place
-	containerID, err := w.Train(modelImageName, trainFolder)
+	_, err = w.Train(modelImageName, trainFolder, untargetedTestFolder, modelFolder)
 	if err != nil {
 		return fmt.Errorf("Error in train task: %s -- Body: %s", err, task)
-	}
-
-	_, err = w.Predict(modelImageName, untargetedTestFolder)
-	if err != nil {
-		return fmt.Errorf("Error in test task: %s -- Body: %s", err, task)
 	}
 
 	// Let's move test predictions to the test folder with targets
@@ -194,26 +196,27 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	)
 
 	// Let's compute the performance !
-	newModelImageName := fmt.Sprintf("%s-%s", w.modelImagePrefix, task.ModelEnd)
 	_, err = w.ComputePerf(problemImageName, trainFolder, testFolder)
 	if err != nil {
 		// FIXME: do not return here
 		return fmt.Errorf("Error computing perf for problem %s and model (new) %s: %s", task.Problem, task.ModelEnd, err)
 	}
 
-	// Let's create a new model and post it to storage
-	snapshot, err := w.containerRuntime.SnapshotContainer(containerID, newModelImageName)
-	if err != nil {
-		return fmt.Errorf("Error snapshotting container %s to image %s: %s", containerID, newModelImageName, err)
-	}
+	// Let's create a new model and post it to storage TODO change that: models should be tar.gz files
+	// of the model volume after the training
+	// newModelImageName := fmt.Sprintf("%s-%s", w.modelImagePrefix, task.ModelEnd)
+	// snapshot, err := w.containerRuntime.SnapshotContainer(containerID, newModelImageName)
+	// if err != nil {
+	// 	return fmt.Errorf("Error snapshotting container %s to image %s: %s", containerID, newModelImageName, err)
+	// }
 
-	err = w.storage.PostAlgo(task.ModelEnd, snapshot)
-	if err != nil {
-		return fmt.Errorf("Error streaming new model %s to storage: %s", task.ModelEnd, err)
-	}
+	// err = w.storage.PostAlgo(task.ModelEnd, snapshot)
+	// if err != nil {
+	// 	return fmt.Errorf("Error streaming new model %s to storage: %s", task.ModelEnd, err)
+	// }
 
 	// Let's send the perf file to the orchestrator
-	performanceFilePath := fmt.Sprintf("%s/performance.json", trainFolder)
+	performanceFilePath := fmt.Sprintf("%s/performance.json", testFolder)
 	resultFile, err := os.Open(performanceFilePath)
 	if err != nil {
 		return fmt.Errorf("Error reading performance file %s: %s", performanceFilePath, err)
@@ -238,11 +241,10 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 // 		return fmt.Errorf("Error un-marshaling pred-uplet: %s -- Body: %s", err, message)
 // 	}
 //
-// 	// Let's pass the prediction task to our execution backend
-// 	prediction, err := w.executionBackend.Predict(task.Model, task.Data)
-// 	if err != nil {
-// 		return fmt.Errorf("Error in prediction task: %s -- Body: %s", err, message)
-// 	}
+//	_, err = w.Predict(modelImageName, untargetedTestFolder)
+//	if err != nil {
+//		return fmt.Errorf("Error in test task: %s -- Body: %s", err, task)
+//	}
 //
 // 	// TODO: send the prediction to the viewer, asynchronously
 // 	log.Printf("Predicition completed with success. Predicition %s", prediction)
@@ -291,20 +293,22 @@ func (w *Worker) ModelImageLoad(modelImage string, imageReader io.Reader) error 
 func (w *Worker) UntargetTestingVolume(problemImage, testFolder, untargetedTestFolder string) (containerID string, err error) {
 	return w.containerRuntime.RunImageInUntrustedContainer(
 		problemImage,
-		[]string{"-T", "detarget", "-o", "/true_data", "-p", "/pred_data"},
+		[]string{"-T", "detarget", "-i", "/true_data", "-s", "/pred_data"},
 		map[string]string{
-			testFolder:           "/true_data",
-			untargetedTestFolder: "/pred_data",
+			testFolder:           "/true_data/test",
+			untargetedTestFolder: "/pred_data/test",
 		}, true)
 }
 
 // Train launches the submission container's train routines
-func (w *Worker) Train(modelImage, trainFolder string) (containerID string, err error) {
+func (w *Worker) Train(modelImage, trainFolder, testFolder, modelFolder string) (containerID string, err error) {
 	return w.containerRuntime.RunImageInUntrustedContainer(
 		modelImage,
 		[]string{"-V", "/data", "-T", "train"},
 		map[string]string{
 			trainFolder: "/data/train",
+			testFolder:  "/data/test",
+			modelFolder: "/data/model",
 		}, false)
 }
 
@@ -322,9 +326,9 @@ func (w *Worker) Predict(modelImage, testFolder string) (containerID string, err
 func (w *Worker) ComputePerf(problemImage, trainFolder, testFolder string) (containerID string, err error) {
 	return w.containerRuntime.RunImageInUntrustedContainer(
 		problemImage,
-		[]string{"-T", "perf", "-o", "/true_data", "-p", "/pred_data"},
+		[]string{"-T", "perf", "-i", "/true_data", "-s", "/pred_data"},
 		map[string]string{
-			trainFolder: "/true_data",
-			testFolder:  "/pred_data",
+			testFolder:  "/true_data/test",
+			trainFolder: "/pred_data/train",
 		}, true)
 }
