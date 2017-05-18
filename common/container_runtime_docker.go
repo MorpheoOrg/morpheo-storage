@@ -170,8 +170,11 @@ func (r *DockerRuntime) RunImageInUntrustedContainer(imageName string, args []st
 	})()
 
 	// Let's wait for the command to be over
-	status, err := r.docker.ContainerWait(ctx, containerCreateBody.ID)
-	if err != nil {
+	containerWaitOkBodyChan, errChan := r.docker.ContainerWait(ctx, containerCreateBody.ID, dockerContainer.WaitConditionNotRunning)
+	status := (<-containerWaitOkBodyChan).StatusCode
+	if status != 0 {
+		log.Println("[ERROR] ContainerWaitOKBody has status %s", status)
+		err = <-errChan
 		return "", fmt.Errorf("Error waiting for untrusted container to exit: %s", err)
 	}
 
