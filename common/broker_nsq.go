@@ -99,6 +99,11 @@ func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int)
 
 	// Let's add our handler to that (topic, channel) tuple
 	config := nsq.NewConfig()
+	config.LookupdPollInterval = 5 * time.Second
+	config.MaxAttempts = 1
+	config.HeartbeatInterval = 5 * time.Second
+	config.MsgTimeout = 600 * time.Second
+
 	consumer, err := nsq.NewConsumer(topic, c.Channel, config)
 	if err != nil {
 		return fmt.Errorf("Error creating NSQ Consumer for topic %s: %s", topic, err)
@@ -122,6 +127,7 @@ func newHandlerWrapper(handler Handler) *handlerWrapper {
 }
 
 func (hw *handlerWrapper) HandleMessage(message *nsq.Message) (err error) {
+	log.Printf("[DEBUG] nsq-consumer received task")
 	err = hw.handler(message.Body)
 	// TODO: smart backoff strategy
 	// if _, fatal := err.(HandlerFatalError); fatal {
