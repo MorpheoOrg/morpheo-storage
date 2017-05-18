@@ -6,6 +6,6 @@ import "io"
 // embed. A file is stored under a given key that can be used for further retrieval. It aims at
 // abstracting disk storage as well as Amazon S3 (and alike) distributed storage platforms
 type BlobStore interface {
-	Put(key string, data io.Reader) error
+	Put(key string, data io.Reader, size int64) error
 	Get(key string) (data io.ReadCloser, err error)
 }

@@ -93,6 +93,7 @@ services:
     memswap_limit: 100000000
     volumes:
     - ./data/storage:/data
+    - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
     ports:
     - "${STORAGE_PORT}:80/tcp"
     networks:

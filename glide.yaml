@@ -1,5 +1,12 @@
 package: github.com/MorpheoOrg/go-morpheo
 import:
+# Aws
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
+  - aws/session
+  - service/s3
+
 # Iris Web micro-framework
 - package: gopkg.in/kataras/iris.v6
   version: ^6.0.0

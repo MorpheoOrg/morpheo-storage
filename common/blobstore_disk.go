@@ -11,9 +11,16 @@ type LocalBlobStore struct {
 	DataDir string
 }
 
+// NewLocalBlobStore creates a new local Blobstore given a data directory
+func NewLocalBlobStore(dataDir string) (BlobStore, error) {
+	return &LocalBlobStore{
+		DataDir: dataDir,
+	}, nil
+}
+
 // Put writes a file in the data directory (and creates necessarry sub-directories if there are
 // forward slashes in the key name)
-func (s *LocalBlobStore) Put(key string, data io.Reader) error {
+func (s *LocalBlobStore) Put(key string, data io.Reader, size int64) error {
 	datapath := filepath.Join(s.DataDir, key)
 
 	parent := filepath.Dir(datapath)

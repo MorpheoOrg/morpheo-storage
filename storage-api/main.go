@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -109,7 +110,6 @@ func main() {
 		Path:   true,
 	})
 	app.Use(customLogger)
-
 	db, err := sqlx.Connect(
 		"postgres",
 		fmt.Sprintf(
@@ -148,12 +148,15 @@ func main() {
 		log.Fatalf("Cannot create model %s: %s", DataModelName, err)
 	}
 
+	//Set BlobStore
+	blobStore, err := setBlobStore(conf.DataDir, conf.AWSBucket, conf.AWSRegion)
+	if err != nil {
+		log.Fatalf("Cannot set blobStore: ", err)
+	}
+
 	api := &apiServer{
-		conf: conf,
-		// TODO: implement S3 storage and use a CLI flag to set the blobStore to use
-		blobStore: &common.LocalBlobStore{
-			DataDir: conf.DataDir,
-		},
+		conf:         conf,
+		blobStore:    blobStore,
 		problemModel: problemModel,
 		algoModel:    algoModel,
 		modelModel:   modelModel,
@@ -210,7 +213,11 @@ func (s *apiServer) checkUUID(candidate string) (id uuid.UUID, err error) {
 }
 
 func (s *apiServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.Context) error {
-	err := s.blobStore.Put(s.getBlobKey(blobType, id), c.Request.Body)
+	size, err := strconv.ParseInt(c.Request.Header.Get("Content-Length"), 10, 64)
+	if err != nil {
+		return err
+	}
+	err = s.blobStore.Put(s.getBlobKey(blobType, id), c.Request.Body, size)
 	defer c.Request.Body.Close()
 	if err != nil {
 		return err
@@ -501,4 +508,14 @@ func (s *apiServer) getDataBlob(c *iris.Context) {
 	}
 
 	s.streamBlobFromStorage("data", c)
+}
+
+func setBlobStore(dataDir string, awsBucket string, awsRegion string) (common.BlobStore, error) {
+	switch {
+	case awsBucket == "" || awsRegion == "":
+		log.Println(fmt.Sprintf("[LocalBlobStore] Data is stored locally in directory: %s", dataDir))
+		return common.NewLocalBlobStore(dataDir)
+	default:
+		return common.NewS3BlobStore(awsBucket, awsRegion)
+	}
 }

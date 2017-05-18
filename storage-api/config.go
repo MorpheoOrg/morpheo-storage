@@ -21,8 +21,12 @@ type StorageConfig struct {
 	DBMigrationsDir string
 	DBRollback      bool
 
-	// Local (disk) blob store configuration
+	// local (disk) blob store configuration
 	DataDir string
+
+	// S3 config
+	AWSBucket string
+	AWSRegion string
 }
 
 // TLSOn returns true if TLS credentials have been provided. The API will then
@@ -49,6 +53,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 		dbRollback      bool
 
 		dataDir string
+
+		awsBucket string
+		awsRegion string
 	)
 
 	// CLI Flags
@@ -66,7 +73,10 @@ func NewStorageConfig() (conf *StorageConfig) {
 	flag.StringVar(&dbMigrationsDir, "db-migrations-dir", "/migrations", "The database migrations directory (default: /migrations)")
 	flag.BoolVar(&dbRollback, "db-rollback", false, "if true, rolls back the last migration (default: false)")
 
-	flag.StringVar(&dataDir, "data-dir", "/data", "The directory to store blob data under (default: /data). Note that this only applies when using local storage")
+	flag.StringVar(&dataDir, "data-dir", "/data", "The directory to store locally blob data under (default: /data)")
+
+	flag.StringVar(&awsBucket, "s3-bucket", "", "AWS Bucket (default: empty string)")
+	flag.StringVar(&awsRegion, "s3-region", "", "AWS Region (default: empty string)")
 
 	flag.Parse()
 
@@ -87,6 +97,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 		DBRollback:      dbRollback,
 
 		DataDir: dataDir,
+
+		AWSBucket: awsBucket,
+		AWSRegion: awsRegion,
 	}
 	return
 }
