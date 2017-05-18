@@ -112,26 +112,30 @@ func (s *StorageAPI) postObjectBlob(prefix string, id uuid.UUID, dataReader io.R
 
 // GetProblemWorkflow returns a ProblemWorkflow's metadata
 func (s *StorageAPI) GetProblemWorkflow(id uuid.UUID) (problem *common.Problem, err error) {
+	problem = &common.Problem{}
 	err = s.getAndParseJSONObject(StorageProblemWorkflowRoute, id, problem)
-	return
+	return problem, err
 }
 
 // GetAlgo returns an Algo's metadata
 func (s *StorageAPI) GetAlgo(id uuid.UUID) (algo *common.Algo, err error) {
+	algo = &common.Algo{}
 	err = s.getAndParseJSONObject(StorageAlgoRoute, id, algo)
-	return
+	return algo, err
 }
 
 // GetModel returns a Model's metadata
 func (s *StorageAPI) GetModel(id uuid.UUID) (model *common.Model, err error) {
+	model = &common.Model{}
 	err = s.getAndParseJSONObject(StorageModelRoute, id, model)
-	return
+	return model, err
 }
 
 // GetData returns a dataset's metadata
 func (s *StorageAPI) GetData(id uuid.UUID) (data *common.Data, err error) {
+	data = &common.Data{}
 	err = s.getAndParseJSONObject(StorageDataRoute, id, data)
-	return
+	return data, err
 }
 
 // GetProblemWorkflowBlob returns an io.ReadCloser to a problem workflow image

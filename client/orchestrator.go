@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/MorpheoOrg/go-morpheo/common"
@@ -85,4 +86,43 @@ func (o *OrchestratorAPI) postData(route string, upletID uuid.UUID, data io.Read
 // PostLearnResult forwards a JSON-formatted learn result to the orchestrator HTTP API
 func (o *OrchestratorAPI) PostLearnResult(learnupletID uuid.UUID, data io.Reader) error {
 	return o.postData(OrchestratorLearnResultRoute, learnupletID, data)
+}
+
+// OrchestratorAPIMock mocks the Orchestrator API, always returning ok to update queries except for
+// given "unexisting" pred/learn uplet with a given UUID
+type OrchestratorAPIMock struct {
+	Orchestrator
+
+	UnexistingUplet string
+}
+
+// NewOrchestratorAPIMock returns with a mock of the Orchestrator API
+func NewOrchestratorAPIMock() (s *OrchestratorAPIMock) {
+	return &OrchestratorAPIMock{
+		UnexistingUplet: "ea408171-0205-475e-8962-a02855767260",
+	}
+}
+
+// UpdateUpletStatus returns nil except if OrchestratorAPIMock.UnexistingUpletID is passed
+func (o *OrchestratorAPIMock) UpdateUpletStatus(upletType, status string, upletID uuid.UUID) error {
+	if upletID.String() != o.UnexistingUplet {
+		log.Printf("[orchestrator-mock] Received update status for %s-uplet %s. Status: %s", upletType, upletID, status)
+		return nil
+	}
+	return fmt.Errorf("[orchestrator-mock][status-update] Unexisting uplet %s", upletID)
+}
+
+// PostLearnResult returns nil except if OrchestratorAPIMock.UnexistingUpletID is passed
+func (o *OrchestratorAPIMock) PostLearnResult(learnupletID uuid.UUID, dataReader io.Reader) error {
+	if learnupletID.String() != o.UnexistingUplet {
+		buf := bytes.Buffer{}
+		_, err := buf.ReadFrom(dataReader)
+		data := buf.String()
+		log.Printf("[orchestrator-mock] Received learn result for learn-uplet %s: \n %s", learnupletID, data)
+		if err != nil {
+			log.Printf("[orchestrator-mock] Error forwarding performance to stdout: %s", err)
+		}
+		return nil
+	}
+	return fmt.Errorf("[orchestrator-mock][status-update] Unexisting uplet %s", learnupletID)
 }
