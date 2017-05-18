@@ -37,10 +37,11 @@ func main() {
 	}
 
 	// And with the orchestrator (TODO: flags flags flags)
-	orchestratorBackend := &client.OrchestratorAPI{
-		Hostname: "orchestrator",
-		Port:     80,
-	}
+	// orchestratorBackend := &client.OrchestratorAPI{
+	// 	Hostname: "orchestrator",
+	// 	Port:     80,
+	// }
+	orchestratorBackend := client.NewOrchestratorAPIMock()
 
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers
@@ -59,7 +60,7 @@ func main() {
 		"pred",
 		"model",
 		"problem",
-		"test",
+		"algo",
 		containerRuntime,
 		storageBackend,
 		orchestratorBackend,
