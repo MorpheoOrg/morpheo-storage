@@ -94,15 +94,15 @@ func (c *ConsumerNSQ) ConsumeUntilKilled() {
 }
 
 // AddHandler adds a handler function (with a tunable level of concurrency) to our NSQ consumer
-func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int) (err error) {
+func (c *ConsumerNSQ) AddHandler(topic string, handler Handler, concurrency int, timeout time.Duration) (err error) {
 	log.Printf("Adding %d handler(s) for topic %s.", concurrency, topic)
 
 	// Let's add our handler to that (topic, channel) tuple
 	config := nsq.NewConfig()
-	config.LookupdPollInterval = 5 * time.Second
+	config.LookupdPollInterval = c.QueuePollingInterval
 	config.MaxAttempts = 1
-	config.HeartbeatInterval = 5 * time.Second
-	config.MsgTimeout = 600 * time.Second
+	config.HeartbeatInterval = c.QueuePollingInterval
+	config.MsgTimeout = timeout
 
 	consumer, err := nsq.NewConsumer(topic, c.Channel, config)
 	if err != nil {

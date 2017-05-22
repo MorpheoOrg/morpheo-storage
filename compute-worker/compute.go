@@ -77,18 +77,20 @@ func (w *Worker) HandleLearn(message []byte) (err error) {
 	}
 
 	// Update its status to pending on the orchestrator
-	err = w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusPending, task.ID)
-	if err != nil {
-		return fmt.Errorf("Error seting learnuplet status to pending on the orchestrator: %s", err)
-	}
+	// err = w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusPending, task.ID)
+	// if err != nil {
+	// 	return fmt.Errorf("Error seting learnuplet status to pending on the orchestrator: %s", err)
+	// }
 
 	err = w.LearnWorkflow(task)
 	if err != nil {
+		log.Println(err)
+		return err
 		// TODO: handle fatal and non-fatal errors differently and set learnuplet status to failed only
 		// if the error was fatal
 		err = w.orchestrator.UpdateUpletStatus(common.TypeLearnUplet, common.TaskStatusFailed, task.ID)
 		if err != nil {
-			return fmt.Errorf("Error seting learnuplet status to failed on the orchestrator: %s", err)
+			return fmt.Errorf("Error setting learnuplet status to failed on the orchestrator: %s", err)
 		}
 		return fmt.Errorf("Error in LearnWorkflow: %s", err)
 	}
@@ -268,13 +270,19 @@ func (w *Worker) LearnWorkflow(task common.LearnUplet) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error reading performance file %s: %s", performanceFilePath, err)
 	}
-	defer os.Remove(performanceFilePath)
-	defer resultFile.Close()
+	perfuplet := client.Perfuplet{Status: "done"}
+	err = json.NewDecoder(resultFile).Decode(perfuplet)
+	if err != nil {
+		return fmt.Errorf("Error un-marshaling performance file to JSON: %s", err)
+	}
 
-	err = w.orchestrator.PostLearnResult(task.ID, resultFile)
+	err = w.orchestrator.PostLearnResult(task.ID, perfuplet)
 	if err != nil {
 		return fmt.Errorf("Error posting learn result %s to orchestrator: %s", task.ModelEnd, err)
 	}
+
+	resultFile.Close()
+	os.Remove(performanceFilePath)
 
 	log.Printf("[INFO] Train finished with success, cleaning up...")
 

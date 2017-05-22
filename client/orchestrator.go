@@ -19,10 +19,18 @@ const (
 	OrchestratorPredResultRoute   = "/preddone"
 )
 
+// Perfuplet describes the response of compute to the orchestrator
+type Perfuplet struct {
+	Status    string             `json:"status"`
+	Perf      float64            `json:"perf"`
+	TrainPerf map[string]float64 `json:"train_perf"`
+	TestPerf  map[string]float64 `json:"test_perf"`
+}
+
 // Orchestrator describes Morpheo's orchestrator API
 type Orchestrator interface {
 	UpdateUpletStatus(upletType, status string, upletID uuid.UUID) error
-	PostLearnResult(learnupletID uuid.UUID, data io.Reader) error
+	PostLearnResult(learnupletID uuid.UUID, perfuplet Perfuplet) error
 }
 
 // OrchestratorAPI is a wrapper around our orchestrator API
@@ -84,7 +92,12 @@ func (o *OrchestratorAPI) postData(route string, upletID uuid.UUID, data io.Read
 }
 
 // PostLearnResult forwards a JSON-formatted learn result to the orchestrator HTTP API
-func (o *OrchestratorAPI) PostLearnResult(learnupletID uuid.UUID, data io.Reader) error {
+func (o *OrchestratorAPI) PostLearnResult(learnupletID uuid.UUID, perfuplet Perfuplet) error {
+	dataBytes, err := json.Marshal(perfuplet)
+	if err != nil {
+		return fmt.Errorf("Error marshaling perfuplet to JSON: %s", perfuplet)
+	}
+	data := bytes.NewReader(dataBytes)
 	return o.postData(OrchestratorLearnResultRoute, learnupletID, data)
 }
 
@@ -113,15 +126,9 @@ func (o *OrchestratorAPIMock) UpdateUpletStatus(upletType, status string, upletI
 }
 
 // PostLearnResult returns nil except if OrchestratorAPIMock.UnexistingUpletID is passed
-func (o *OrchestratorAPIMock) PostLearnResult(learnupletID uuid.UUID, dataReader io.Reader) error {
+func (o *OrchestratorAPIMock) PostLearnResult(learnupletID uuid.UUID, perfuplet Perfuplet) error {
 	if learnupletID.String() != o.UnexistingUplet {
-		buf := bytes.Buffer{}
-		_, err := buf.ReadFrom(dataReader)
-		data := buf.String()
-		log.Printf("[orchestrator-mock] Received learn result for learn-uplet %s: \n %s", learnupletID, data)
-		if err != nil {
-			log.Printf("[orchestrator-mock] Error forwarding performance to stdout: %s", err)
-		}
+		log.Printf("[orchestrator-mock] Received learn result for learn-uplet %s: \n %s", learnupletID, perfuplet)
 		return nil
 	}
 	return fmt.Errorf("[orchestrator-mock][status-update] Unexisting uplet %s", learnupletID)

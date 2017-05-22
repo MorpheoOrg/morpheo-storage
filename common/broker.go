@@ -1,6 +1,9 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Topics (task queue names) for our broker
 const (
@@ -22,8 +25,9 @@ type Consumer interface {
 	ConsumeUntilKilled()
 
 	// Add a handler function to the consumer for a given topic name. Up to concurrency tasks will be
-	// executed in parrallel
-	AddHandler(topic string, handler Handler, concurrency int)
+	// executed in parrallel. After the given timeout is reached, the task will be considered failed
+	// and will be re-enqueued.
+	AddHandler(topic string, handler Handler, concurrency int, timeout time.Duration)
 }
 
 // Handler is an abstract Interface to a message handler Abstracts the way messages are handled so

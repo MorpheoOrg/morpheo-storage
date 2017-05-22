@@ -7,13 +7,6 @@ import (
 	"github.com/MorpheoOrg/go-morpheo/common"
 )
 
-// Consumer topics: names of the different work queues
-const (
-	PredictionTopic = "prediction"
-	TestTopic       = "test"
-	LearnTopic      = "train"
-)
-
 // ProducerConfig Compute API configuration, subject to dynamic changes for the addresses of
 // storage & orchestrator endpoints, and any RESTFul HTTP API added in the future.
 type ProducerConfig struct {

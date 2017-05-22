@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"time"
 
@@ -10,69 +9,62 @@ import (
 )
 
 func main() {
-	// TODO: improve config and add a -container-backend flag and relevant opts
-	// TODO: add NSQ consumer flags
-	var (
-		lookupUrls           common.MultiStringFlag
-		channel              string
-		queuePollingInterval time.Duration
-	)
+	conf := NewConsumerConfig()
 
-	flag.Var(&lookupUrls, "lookup-urls", "The URLs of the Nsqlookupd instances to fetch our topics from.")
-	flag.StringVar(&channel, "channel", "compute", "The channel to use (default: compute)")
-	flag.DurationVar(&queuePollingInterval, "lookup-interval", 5*time.Second, "The interval at which nsqlookupd will be polled")
-	flag.Parse()
-
-	// Config check
-	if len(lookupUrls) == 0 {
-		lookupUrls = append(lookupUrls, "nsqlookupd:6460")
+	// Let's connect with Storage (or use our mock if no storage host was provided)
+	var storageBackend client.Storage
+	// if conf.StorageHost != "" {
+	storageBackend = &client.StorageAPI{
+		Hostname: conf.StorageHost,
+		Port:     conf.StoragePort,
 	}
-
-	// TODO: flags to choose backends or mocks
-
-	// Let's connect with Storage (TODO: flags flags flags)
-	storageBackend := &client.StorageAPI{
-		Hostname: "storage",
-		Port:     80,
-	}
-
-	// And with the orchestrator (TODO: flags flags flags)
-	// orchestratorBackend := &client.OrchestratorAPI{
-	// 	Hostname: "orchestrator",
-	// 	Port:     80,
+	// } else {
+	// 	storageBackend = client.NewStorageAPIMock()
 	// }
-	orchestratorBackend := client.NewOrchestratorAPIMock()
+
+	// And with the orchestrator
+	var orchestratorBackend client.Orchestrator
+	if conf.OrchestratorHost != "" {
+		orchestratorBackend = &client.OrchestratorAPI{
+			Hostname: conf.OrchestratorHost,
+			Port:     conf.OrchestratorPort,
+		}
+	} else {
+		orchestratorBackend = client.NewOrchestratorAPIMock()
+	}
 
 	// Let's hook to our container backend and create a Worker instance containing
 	// our message handlers
-	// TODO timeout in a flag
-	containerRuntime, err := common.NewDockerRuntime(600 * time.Second)
+	containerRuntime, err := common.NewDockerRuntime(conf.DockerTimeout)
 	if err != nil {
 		log.Panicf("[FATAL ERROR] Impossible to connect to Docker container backend: %s", err)
 	}
 
-	// TODO: put these arguments in flags
 	worker := NewWorker(
+		// Root folder for train/test/predict data (should shared with the container runtime)
 		"/data",
+		// Subfolder names
 		"train",
 		"test",
 		"untargeted_test",
 		"pred",
 		"model",
+		// Container runtime image name prefixes
 		"problem",
 		"algo",
+		// Dependency injection is done here :)
 		containerRuntime,
 		storageBackend,
 		orchestratorBackend,
 	)
 
 	// Let's hook with our consumer
-	consumer := common.NewNSQConsumer(lookupUrls, channel, queuePollingInterval)
+	consumer := common.NewNSQConsumer(conf.NsqlookupdURLs, "compute", 5*time.Second)
 
 	// Wire our message handlers
-	consumer.AddHandler(common.TrainTopic, worker.HandleLearn, 1)
+	consumer.AddHandler(common.TrainTopic, worker.HandleLearn, conf.LearnParallelism, conf.LearnTimeout)
 	// TODO: add the prediction handler too.
-	// consumer.AddHandler(common.PredictTopic, worker.HandlePred, 1)
+	// consumer.AddHandler(common.PredictTopic, worker.HandlePred, conf.PredictParallelism, conf.PredictTimeout)
 
 	// Let's connect to the for real and start pulling tasks
 	consumer.ConsumeUntilKilled()
