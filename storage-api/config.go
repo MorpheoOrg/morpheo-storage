@@ -10,6 +10,10 @@ type StorageConfig struct {
 	CertFile string
 	KeyFile  string
 
+	// Authentification
+	APIUser     string
+	APIPassword string
+
 	// Database configuration
 	DBHost string
 	DBPort int
@@ -43,6 +47,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 		certFile string
 		keyFile  string
 
+		apiUser     string
+		apiPassword string
+
 		dbHost string
 		dbPort int
 		dbUser string
@@ -63,6 +70,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 	flag.IntVar(&port, "port", 8000, "The port our compute API will be listening on")
 	flag.StringVar(&certFile, "cert", "", "The TLS certs to serve to clients (leave blank for no TLS)")
 	flag.StringVar(&keyFile, "key", "", "The TLS key used to encrypt connection (leave blank for no TLS)")
+
+	flag.StringVar(&apiUser, "user", "", "The username for Basic Authentification")
+	flag.StringVar(&apiPassword, "password", "", "The password for Basic Authentification")
 
 	flag.StringVar(&dbHost, "db-host", "postgres", "The hostname of the postgres database (default: postgres)")
 	flag.IntVar(&dbPort, "db-port", 5432, "The database port")
@@ -86,6 +96,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 		Port:     port,
 		CertFile: certFile,
 		KeyFile:  keyFile,
+
+		APIUser:     apiUser,
+		APIPassword: apiPassword,
 
 		DBHost: dbHost,
 		DBPort: dbPort,

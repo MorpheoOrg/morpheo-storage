@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -13,6 +14,7 @@ import (
 	"github.com/satori/go.uuid"
 	"gopkg.in/kataras/iris.v6"
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter" // <--- TODO or adaptors/gorillamux
+	"gopkg.in/kataras/iris.v6/middleware/basicauth"
 	"gopkg.in/kataras/iris.v6/middleware/logger"
 
 	"github.com/MorpheoOrg/go-morpheo/common"
@@ -45,34 +47,34 @@ type apiServer struct {
 	dataModel    *Model
 }
 
-func (s *apiServer) configureRoutes(app *iris.Framework) {
+func (s *apiServer) configureRoutes(app *iris.Framework, authentication iris.HandlerFunc) {
 	// Misc.
 	app.Get(rootRoute, s.index)
 	app.Get(healthRoute, s.health)
 
 	// Problem
-	app.Get(problemListRoute, s.getProblemList)
-	app.Post(problemListRoute, s.postProblem)
-	app.Get(problemRoute, s.getProblem)
-	app.Get(problemBlobRoute, s.getProblemBlob)
+	app.Get(problemListRoute, authentication, s.getProblemList)
+	app.Post(problemListRoute, authentication, s.postProblem)
+	app.Get(problemRoute, authentication, s.getProblem)
+	app.Get(problemBlobRoute, authentication, s.getProblemBlob)
 
 	// Algo
-	app.Get(algoListRoute, s.getAlgoList)
-	app.Post(algoListRoute, s.postAlgo)
-	app.Get(algoRoute, s.getAlgo)
-	app.Get(algoBlobRoute, s.getAlgoBlob)
+	app.Get(algoListRoute, authentication, s.getAlgoList)
+	app.Post(algoListRoute, authentication, s.postAlgo)
+	app.Get(algoRoute, authentication, s.getAlgo)
+	app.Get(algoBlobRoute, authentication, s.getAlgoBlob)
 
 	// Model
-	app.Get(modelListRoute, s.getModelList)
-	app.Post(modelListRoute, s.postModel)
-	app.Get(modelRoute, s.getModel)
-	app.Get(modelBlobRoute, s.getModelBlob)
+	app.Get(modelListRoute, authentication, s.getModelList)
+	app.Post(modelListRoute, authentication, s.postModel)
+	app.Get(modelRoute, authentication, s.getModel)
+	app.Get(modelBlobRoute, authentication, s.getModelBlob)
 
 	// Data
-	app.Get(dataListRoute, s.getDataList)
-	app.Post(dataListRoute, s.postData)
-	app.Get(dataRoute, s.getData)
-	app.Get(dataBlobRoute, s.getDataBlob)
+	app.Get(dataListRoute, authentication, s.getDataList)
+	app.Post(dataListRoute, authentication, s.postData)
+	app.Get(dataRoute, authentication, s.getData)
+	app.Get(dataBlobRoute, authentication, s.getDataBlob)
 }
 
 // Database migration routine
@@ -99,8 +101,16 @@ func main() {
 
 	// Iris setup
 	app := iris.New()
-	app.Adapt(iris.DevLogger())
-	app.Adapt(httprouter.New())
+	app.Adapt(iris.DevLogger(), httprouter.New())
+
+	// Iris authentication
+	authConfig := basicauth.Config{
+		Users:      map[string]string{conf.APIUser: conf.APIPassword},
+		Realm:      "Authorization Required",
+		ContextKey: "mycustomkey",
+		Expires:    time.Duration(30) * time.Minute,
+	}
+	authentication := basicauth.New(authConfig)
 
 	// Logging middleware configuration
 	customLogger := logger.New(logger.Config{
@@ -162,7 +172,7 @@ func main() {
 		modelModel:   modelModel,
 		dataModel:    dataModel,
 	}
-	api.configureRoutes(app)
+	api.configureRoutes(app, authentication)
 
 	// Main server loop
 	if conf.TLSOn() {

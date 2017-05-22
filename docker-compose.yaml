@@ -86,7 +86,7 @@ services:
   storage:
     build: ./storage-api
     restart: unless-stopped
-    command: -host 0.0.0.0 -port 80
+    command: -host 0.0.0.0 -port 80 -user ${STORAGE_AUTH_USER} -password ${STORAGE_AUTH_PASSWORD}
     ## Stops the container from taking up all the cache memory on big file
     ## uploads
     mem_limit: 100000000
