@@ -21,6 +21,8 @@ type ConsumerConfig struct {
 	OrchestratorPort int
 	StorageHost      string
 	StoragePort      int
+	StorageUser      string
+	StoragePassword  string
 
 	// Container Runtime
 	DockerHost    string
@@ -40,6 +42,8 @@ func NewConsumerConfig() (conf *ConsumerConfig) {
 		orchestratorPort int
 		storageHost      string
 		storagePort      int
+		storageUser      string
+		storagePassword  string
 
 		dockerHost    string
 		dockerTimeout time.Duration
@@ -55,8 +59,10 @@ func NewConsumerConfig() (conf *ConsumerConfig) {
 	flag.StringVar(&orchestratorHost, "orchestrator-host", "", "Hostname of the orchestrator to send notifications to (leave blank to use the Orchestrator API Mock)")
 	flag.IntVar(&orchestratorPort, "orchestrator-port", 80, "TCP port to contact the orchestrator on (default: 80)")
 
-	flag.StringVar(&storageHost, "storage-host", "", "Hostname of the storage API to retrieve data frome (leave blank to use the Storage API Mock)")
+	flag.StringVar(&storageHost, "storage-host", "", "Hostname of the storage API to retrieve data from (leave blank to use the Storage API Mock)")
 	flag.IntVar(&storagePort, "storage-port", 80, "TCP port to contact storage on (default: 80)")
+	flag.StringVar(&storageUser, "storage-user", "u", "Basic Authentication username of the storage API")
+	flag.StringVar(&storagePassword, "storage-password", "p", "Basic Authentication password of the storage API")
 
 	flag.StringVar(&dockerHost, "docker-host", "unix://var/run/docker.sock", "URI of the Docker daemon to run containers")
 
@@ -80,6 +86,8 @@ func NewConsumerConfig() (conf *ConsumerConfig) {
 		OrchestratorPort: orchestratorPort,
 		StorageHost:      storageHost,
 		StoragePort:      storagePort,
+		StorageUser:      storageUser,
+		StoragePassword:  storagePassword,
 
 		// Container Runtime
 		DockerHost:    dockerHost,

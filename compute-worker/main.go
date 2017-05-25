@@ -17,6 +17,8 @@ func main() {
 	storageBackend = &client.StorageAPI{
 		Hostname: conf.StorageHost,
 		Port:     conf.StoragePort,
+		User:     conf.StorageUser,
+		Password: conf.StoragePassword,
 	}
 	// } else {
 	// 	storageBackend = client.NewStorageAPIMock()

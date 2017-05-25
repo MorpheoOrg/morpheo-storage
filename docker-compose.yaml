@@ -23,7 +23,7 @@ services:
     memswap_limit: 0
     environment:
     - "DOCKER_HOST=tcp://dind-executor:2376"
-    command: -nsqlookupd-urls "nsqlookupd:4161" -storage-host "storage" -learn-timeout 5m
+    command: -nsqlookupd-urls "nsqlookupd:4161" -storage-host "storage" -storage-user ${STORAGE_AUTH_USER} -storage-password ${STORAGE_AUTH_PASSWORD} -learn-timeout 5m
     privileged: true
     networks:
     - internal

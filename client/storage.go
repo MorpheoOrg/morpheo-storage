@@ -43,6 +43,8 @@ type StorageAPI struct {
 
 	Hostname string
 	Port     int
+	User     string
+	Password string
 }
 
 func (s *StorageAPI) getObjectBlob(prefix string, id uuid.UUID) (dataReader io.ReadCloser, err error) {
@@ -51,7 +53,7 @@ func (s *StorageAPI) getObjectBlob(prefix string, id uuid.UUID) (dataReader io.R
 	if err != nil {
 		return nil, fmt.Errorf("[storage-api] Error building GET request against %s: %s", url, err)
 	}
-
+	req.SetBasicAuth(s.User, s.Password)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("[storage-api] Error performing GET request against %s: %s", url, err)
@@ -71,7 +73,7 @@ func (s *StorageAPI) getAndParseJSONObject(objectRoute string, objectID uuid.UUI
 	if err != nil {
 		return fmt.Errorf("[storage-api] Error building GET request against %s: %s", url, err)
 	}
-
+	req.SetBasicAuth(s.User, s.Password)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("[storage-api] Error performing GET request against %s: %s", url, err)
@@ -97,7 +99,7 @@ func (s *StorageAPI) postObjectBlob(prefix string, id uuid.UUID, dataReader io.R
 	if err != nil {
 		return fmt.Errorf("[storage-api] Error building streaming POST request against %s: %s", url, err)
 	}
-
+	req.SetBasicAuth(s.User, s.Password)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("[storage-api] Error performing streaming POST request against %s: %s", url, err)

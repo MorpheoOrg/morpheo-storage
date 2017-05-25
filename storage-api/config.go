@@ -71,8 +71,8 @@ func NewStorageConfig() (conf *StorageConfig) {
 	flag.StringVar(&certFile, "cert", "", "The TLS certs to serve to clients (leave blank for no TLS)")
 	flag.StringVar(&keyFile, "key", "", "The TLS key used to encrypt connection (leave blank for no TLS)")
 
-	flag.StringVar(&apiUser, "user", "", "The username for Basic Authentification")
-	flag.StringVar(&apiPassword, "password", "", "The password for Basic Authentification")
+	flag.StringVar(&apiUser, "user", "u", "The username for Basic Authentification")
+	flag.StringVar(&apiPassword, "password", "p", "The password for Basic Authentification")
 
 	flag.StringVar(&dbHost, "db-host", "postgres", "The hostname of the postgres database (default: postgres)")
 	flag.IntVar(&dbPort, "db-port", 5432, "The database port")

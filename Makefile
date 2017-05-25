@@ -19,8 +19,8 @@ BUILD_CONTAINER_IMAGE = golang:1-onbuild
 GOBUILD = go build --installsuffix cgo --ldflags '-extldflags \"-static\"'
 
 COMPOSE_CMD = STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 \
-							NSQ_ADMIN_PORT=8085 STORAGE_AUTH_USER=test \
-							STORAGE_AUTH_PASSWORD=test docker-compose
+							NSQ_ADMIN_PORT=8085 STORAGE_AUTH_USER=u \
+							STORAGE_AUTH_PASSWORD=p docker-compose
 
 # User defined variables (use env. variables to override)
 DOCKER_REPO ?= registry.morpheo.io
