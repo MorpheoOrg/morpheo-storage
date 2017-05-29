@@ -55,6 +55,16 @@ should be automatically updated :)
 * [configuration management] Use Viper or Cobra ?
 * Complete our mock suite and write an extensive unit test suite
 
+## License
+
+All this code is open source and licensed under the CeCILL license - which is an
+exact transcription of the GNU GPL license that also is compatible with french
+intellectual property law. Please find the attached licence in English [here](./LICENSE) or
+[in French](./LICENCE).
+
+Note that this license explicitely forbids redistributing this code (or any
+fork) under another licence.
+
 Maintainers
 -----------
 * Étienne Lafarge <etienne@rythm.co>
