@@ -18,6 +18,10 @@ BUILD_CONTAINER_IMAGE = golang:1-onbuild
 
 GOBUILD = go build --installsuffix cgo --ldflags '-extldflags \"-static\"'
 
+COMPOSE_CMD = STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 \
+							NSQ_ADMIN_PORT=8085 STORAGE_AUTH_USER=test \
+							STORAGE_AUTH_PASSWORD=test docker-compose
+
 # User defined variables (use env. variables to override)
 DOCKER_REPO ?= registry.morpheo.io
 DOCKER_TAG ?= $(shell git rev-parse --verify --short HEAD)
@@ -53,11 +57,11 @@ all-docker-clean: $(DOCKER_IMAGES_CLEAN_TARGETS)
 
 ## Development environment build, launch & teardown targets
 devenv-start: all-bin
-	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose up -d --build
+	$(COMPOSE_CMD) up -d --build
 devenv-clean:
-	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose down
+	$(COMPOSE_CMD) down
 devenv-logs:
-	STORAGE_PORT=8081 COMPUTE_PORT=8082 ORCHESTRATOR_PORT=8083 NSQ_ADMIN_PORT=8085 docker-compose logs --follow storage compute compute-worker orchestrator dind-executor
+	$(COMPOSE_CMD) logs --follow storage compute compute-worker orchestrator dind-executor
 
 # Dependency-related rules
 vendor: glide.yaml

@@ -13,6 +13,7 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/satori/go.uuid"
 	"gopkg.in/kataras/iris.v6"
+	"gopkg.in/kataras/iris.v6/adaptors/cors"
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter" // <--- TODO or adaptors/gorillamux
 	"gopkg.in/kataras/iris.v6/middleware/basicauth"
 	"gopkg.in/kataras/iris.v6/middleware/logger"
@@ -111,6 +112,13 @@ func main() {
 		Expires:    time.Duration(30) * time.Minute,
 	}
 	authentication := basicauth.New(authConfig)
+
+	// Iris CORS middleware
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+	})
+	app.Adapt(corsMiddleware)
 
 	// Logging middleware configuration
 	customLogger := logger.New(logger.Config{
@@ -244,14 +252,14 @@ func (s *apiServer) streamBlobFromStorage(blobType string, c *iris.Context) {
 
 	blobReader, err := s.blobStore.Get(s.getBlobKey(blobType, blobID))
 	if err != nil {
-		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error retrieving %s %s:", blobType, blobID, err)))
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error retrieving %s %s: %s", blobType, blobID, err)))
 		return
 	}
 	defer blobReader.Close()
 	c.StreamWriter(func(w io.Writer) bool {
 		_, err := io.Copy(w, blobReader)
 		if err != nil {
-			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading %s %s:", blobType, blobID, err)))
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading %s %s: %s", blobType, blobID, err)))
 			return false
 		}
 		return false

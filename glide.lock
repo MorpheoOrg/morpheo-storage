@@ -1,8 +1,8 @@
-hash: cd85a865c2285412d249eb2b751943cd3d6a8c0774c89eda21b0cc7eb2e9eebf
-updated: 2017-05-22T16:41:53.032745869Z
+hash: 78a32df340d86eabe019ce205034e2b0451d5074d2bf39fe664c7799da607a41
+updated: 2017-05-29T13:45:57.654538628Z
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 31484500fe77b88dbe197c6348358ed275aed5d7
+  version: 26d4122e877bd86f43d528ad7fbde237dbbd3fa9
   subpackages:
   - aws
   - aws/awserr
@@ -31,12 +31,12 @@ imports:
 - name: github.com/BurntSushi/toml
   version: b26d9c308763d68093482582cea63d69be07a0f0
 - name: github.com/docker/distribution
-  version: a528cc1fc338bd00036dbf1315a74c2ee458b094
+  version: 1e2f10eb65743fed02f573d31a4587de09afb20e
   subpackages:
   - digestset
   - reference
 - name: github.com/docker/docker
-  version: bb64d45be1dce3fe1a526b2362a7d8451bfdcbe3
+  version: 79b19c2e16c43f22187538953f49b2c048b063f8
   subpackages:
   - api
   - api/types
@@ -84,7 +84,7 @@ imports:
 - name: github.com/go-ini/ini
   version: afbc45e87f3ba324c532d12c71918ef52e0fb194
 - name: github.com/golang/protobuf
-  version: fec3b39b059c0f88fa6b20f5ed012b1aa203a8b4
+  version: 9f174c986221c608fb5143bd623b6076a71feae3
   subpackages:
   - proto
 - name: github.com/google/go-github
@@ -110,7 +110,7 @@ imports:
 - name: github.com/kataras/go-errors
   version: 6fb46ef666f60ce19b5cc73906d531645d5bf8bc
 - name: github.com/klauspost/compress
-  version: e80ca55b53e5e6f53deed5c7842e7b7da95e1dc7
+  version: f3dce52e0576655d55fd69e74b63da96ad1108f3
   subpackages:
   - flate
   - gzip
@@ -124,7 +124,7 @@ imports:
 - name: github.com/microcosm-cc/bluemonday
   version: e79763773ab6222ca1d5a7cbd9d62d83c1f77081
 - name: github.com/Microsoft/go-winio
-  version: 706941bedd2d9b3a8c88e4022bd0078101f233f2
+  version: f533f7a102197536779ea3a8cb881d639e21ec5a
 - name: github.com/mreiferson/go-snappystream
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
@@ -134,14 +134,18 @@ imports:
 - name: github.com/opencontainers/go-digest
   version: eaa60544f31ccf3b0653b1a118b76d33418ff41b
 - name: github.com/opencontainers/image-spec
-  version: dd5a61d973b4cc40e8ce362b9062b6990e143bbb
+  version: 4038d4391fe912af1031db5a1f511cf07c07cbc8
   subpackages:
   - specs-go
   - specs-go/v1
 - name: github.com/pkg/errors
   version: c605e284fe17294bda444b34710735b29d1a9d90
+- name: github.com/rs/cors
+  version: 2d7dd2a10331137ae3f931ba08c21fd00cbf208d
+- name: github.com/rs/xhandler
+  version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/rubenv/sql-migrate
-  version: 38004e7a77f2b350ea8467038dca66073d907725
+  version: 42c30aabf72921b83678a3d0680fd6cd46682f1b
   subpackages:
   - sqlparse
 - name: github.com/russross/blackfriday
@@ -158,12 +162,12 @@ imports:
   - fasthttputil
   - stackless
 - name: golang.org/x/crypto
-  version: 6c586e17d90a7d08bbbc4069984180dce3b04117
+  version: 7e9105388ebff089b3f99f0ef676ea55a6da3a7e
   subpackages:
   - acme
   - acme/autocert
 - name: golang.org/x/net
-  version: 513929065c19401a1c7b76ecd942f9f86a0c061b
+  version: 48359f4f600b3a2d5cf657458e3f940021631a56
   subpackages:
   - context
   - context/ctxhttp
@@ -171,12 +175,12 @@ imports:
   - html/atom
   - proxy
 - name: golang.org/x/sys
-  version: dbc2be9168a660ef302e04b6ff6406de6f967473
+  version: a55a76086885b80f79961eacb876ebd8caf3868d
   subpackages:
   - unix
   - windows
 - name: google.golang.org/appengine
-  version: 170382fa85b10b94728989dfcf6cc818b335c952
+  version: a2f4131514e563cedfdb6e7d267df9ad48591e93
   subpackages:
   - internal
   - internal/app_identity
@@ -190,6 +194,7 @@ imports:
 - name: gopkg.in/kataras/iris.v6
   version: 76696083c3857ea2afbf21171fb580cf60828177
   subpackages:
+  - adaptors/cors
   - adaptors/httprouter
   - middleware/basicauth
   - middleware/logger
