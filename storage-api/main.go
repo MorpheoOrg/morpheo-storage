@@ -116,6 +116,7 @@ func main() {
 	// Iris CORS middleware
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
+		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	})
 	app.Adapt(corsMiddleware)

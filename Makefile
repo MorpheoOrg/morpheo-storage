@@ -66,6 +66,7 @@ devenv-logs:
 # Dependency-related rules
 vendor: glide.yaml
 	@echo "Pulling dependencies with glide... in a build container too"
+	rm -rf ./vendor
 	mkdir ./vendor
 	$(GLIDE_CONTAINER) bash -c \
 		"go get github.com/Masterminds/glide && glide install && chown $(shell id -u):$(shell id -g) -R ./glide.lock ./vendor"
