@@ -121,7 +121,7 @@ services:
     mem_limit: 100000000
     memswap_limit: 0
     volumes:
-    - ../morpheo-ochestrator/app/:/usr/src/app
+    - ../morpheo-orchestrator/app/:/usr/src/app
 
     links:
     - mongodb

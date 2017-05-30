@@ -6,7 +6,7 @@ import "io"
 // way :)
 type ContainerRuntime interface {
 	// ImageBuildAndLoad builds an Image from a reader on a tar.gz archive containing all requirements
-	// to build the image. In returns an io.ReadCloser on the image and an error if error there is.
+	// to build the image. It returns an io.ReadCloser on the image and an error if error there is.
 	ImageBuild(name string, buildContext io.Reader) (image io.ReadCloser, err error)
 
 	// ImageLoad loads a saved image from an io.Reader into the container runtime
