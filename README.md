@@ -1,70 +1,109 @@
-Morpheo-Compute: a container-oriented Machine-Learning job runner
-=================================================================
+Morpheo: Storage API
+====================
 
-This repository holds the Golang code for the core of the morpheo project. It
-contains the code for our storage API (which is simply a frontend API for a blob
-storage such as a hard drive or Amazon S3, targeted at storing problem and
-algorithms as containers and data files as... files :)
+The `storage` API for the
+[Morpheo](https://morpheoorg.github.io/morpheo/modules/introduction.html)
+platform.
 
-TL;DR
------
-* `client`: Golang API client for the `orchestrator` and `storage`
-* `common`: data structure definitions and common interfaces and types
-  (container runtime backend, blob store backend, broker backend...)
-* `compute-api` receives compute orders (trainings and predictions) from the
-  `orchestrator` and puts them in a task queue
-* `compute-worker` gets tasks from the above queue, fetches problem workflows,
-  models and data from `storage` and executes learning/training orders.
-* `storage-api` handle problem, algorithm and data uploads, storage and download
-* `utils/dind-daemon` defines an alpine based docker image running the Docker
-  daemon. The `compute-worker` runs its containers (problem workflow &
-  algorithm) in this "Docker in Docker" container.
+It receives problems and submission algorithms as `.tar.gz` files including a
+`Dockerfile` and **streams** them to disk or to another storage backend (such as
+Amazon S3). It also receives, stores and serves datasets that feed ML algorithms
+hosted on the Morpheo platform.
 
-Local dev. environment
-----------------------
+Key features
+------------
 
-### Requirements
+* **RAM-friendly**: uses low-level Golang primitives to stream data directly
+  from the request body, to the response body as it comes. Nothing in stored in
+  RAM (if using disk storage, the cache memory will be used but that's not a
+  problem at all).
+* **Self contained**: Golang enables us to ship a statically linked binary (in a
+  `FROM scratch` docker image for instance)
+* **Simple & Low Level**: written in Golang, simple, and intented to stay so :)
 
-* `docker`, `docker-compose` and `make` (we're using docker containers to build
-  and run our Golang services). Oh and yeah, you'll obviously need `git` too :)
+CLI Arguments
+-------------
 
-### Building
+```
+Usage of ./storage-api/target/storage-api:
 
-* All services' binaries: `make all-bin`
-* A given service binary: `make [compute-api|compute-worker|storage-api]`
-  (binaries are put under `./<service-name>/target/<service-name>`)
-* All `docker` images `make all-docker`
-* A given image: `make [compute-api-docker|compute-worker-docker|storage-api-docker]`
+  -cert string
+    	The TLS certs to serve to clients (leave blank for no TLS)
+  -data-dir string
+    	The directory to store blob data under (default: /data). Note that this only applies when using local storage (default "/data")
+  -db-host string
+    	The hostname of the postgres database (default: postgres) (default "postgres")
+  -db-migrations-dir string
+    	The database migrations directory (default: /migrations) (default "/migrations")
+  -db-name string
+    	The database name (default: morpheo_storage) (default "morpheo_storage")
+  -db-pass string
+    	The database password to use (default: tooshort) (default "tooshort")
+  -db-port int
+    	The database port (default 5432)
+  -db-rollback
+    	if true, rolls back the last migration (default: false)
+  -db-user string
+    	The database user (default: storage) (default "storage")
+  -host string
+    	The hostname our server will be listening on (default "0.0.0.0")
+  -key string
+    	The TLS key used to encrypt connection (leave blank for no TLS)
+  -port int
+    	The port our compute API will be listening on (default 8000)
 
-### Build, run update & destroy local dev. environment, in two commands
-
-```shell
-make devenv-start   # To run on every code change to update the dev. env.
-make devenv-clean   # To run when you want to wipe the dev. env. out
 ```
 
-This launches the `compute` API on port `8081`, the `storage` API on port `8082`
-and the NSQ broker admin interface on port `8085`.
+API Specification
+-----------------
 
-You can simply run this everytime you change some Go code and your dev. env.
-should be automatically updated :)
+ * `GET /`: lists all the routes
+ * `GET /health`: service liveness probe
 
-## TODO
+ * `GET /problem`: problem list
+ * `POST /problem`: post a problem
+ * `GET /problem/:uuid`: get a problem object by id
+ * `GET /problem/:uuid/blob`: get a problem data blob by id
 
-* Integration with the viewer (and analytics)
-* [configuration management] Use Viper or Cobra ?
-* Complete our mock suite and write an extensive unit test suite
+ * `GET /algo`: algo list
+ * `POST /algo`: post an algo
+ * `GET /algo/:uuid`: get an algo object by id
+ * `GET /algo/:uuid/blob`: get an algo data blob by id
 
-## License
+ * `GET /data`: dataset list
+ * `POST /data`: post a dataset
+ * `GET /data/:uuid`: get a dataset object by id
+ * `GET /data/:uuid/blob`: get a dataset data blob by id
 
-All this code is open source and licensed under the CeCILL license - which is an
-exact transcription of the GNU GPL license that also is compatible with french
-intellectual property law. Please find the attached licence in English [here](./LICENSE) or
-[in French](./LICENCE).
+Uploading or retrieving data
+----------------------------
 
-Note that this license explicitely forbids redistributing this code (or any
-fork) under another licence.
+The problem/algo/data blobs are read directly from the request body (for now,
+we're not even using multipart form uploads, it might be necessary at some point
+though).
+
+### Examples with `curl`
+
+* Posting a problem (assuming storage is running on `localhost:8080`):
+```shell
+curl --data-binary "@/path/to/problem.tar.gz" http://localhost:8080/data
+```
+
+* Retrieving a piece of data (assuming storage is running on `localhost:8080`):
+```shell
+curl http://localhost:8080/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
+```
+
+Container Specification
+-----------------------
+
+`/problem` and `/algo` routes expect a `.tar.gz` archive, containing a
+Dockerfile. Please refer to [the
+documentation](https://morpheoorg.github.io/morpheo/) for more information.
+
+Examples can be found [here](https://github.com/MorpheoOrg/hypnogram-wf).
 
 Maintainers
 -----------
+
 * Étienne Lafarge <etienne@rythm.co>
