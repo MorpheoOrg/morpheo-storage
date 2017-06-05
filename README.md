@@ -27,31 +27,42 @@ CLI Arguments
 ```
 Usage of ./storage-api/target/storage-api:
 
+  -host string
+      The hostname our server will be listening on (default "0.0.0.0")
+  -port int
+      The port our compute API will be listening on (default 8000)
   -cert string
-    	The TLS certs to serve to clients (leave blank for no TLS)
-  -data-dir string
-    	The directory to store blob data under (default: /data). Note that this only applies when using local storage (default "/data")
+      The TLS certs to serve to clients (leave blank for no TLS)
+  -key string
+      The TLS key used to encrypt connection (leave blank for no TLS)
+
+  -user string
+      The username for Basic Authentification
+  -password string
+      The password for Basic Authentification
+
   -db-host string
     	The hostname of the postgres database (default: postgres) (default "postgres")
+  -db-port int
+      The database port (default 5432)
+  -db-name string
+      The database name (default: morpheo_storage) (default "morpheo_storage")
+  -db-user string
+      The database user (default: storage) (default "storage")
+  -db-pass string
+      The database password to use (default: tooshort) (default "tooshort")
   -db-migrations-dir string
     	The database migrations directory (default: /migrations) (default "/migrations")
-  -db-name string
-    	The database name (default: morpheo_storage) (default "morpheo_storage")
-  -db-pass string
-    	The database password to use (default: tooshort) (default "tooshort")
-  -db-port int
-    	The database port (default 5432)
   -db-rollback
     	if true, rolls back the last migration (default: false)
-  -db-user string
-    	The database user (default: storage) (default "storage")
-  -host string
-    	The hostname our server will be listening on (default "0.0.0.0")
-  -key string
-    	The TLS key used to encrypt connection (leave blank for no TLS)
-  -port int
-    	The port our compute API will be listening on (default 8000)
 
+  -data-dir string
+      The directory to store blob data under (default: /data).
+      Note that this only applies when using local storage (default "/data")
+  -s3-bucket string
+      The AWS Bucket for S3 Storage (default: empty string)
+  -s3-region string
+      The AWS Bucket region for S3 Storage (default: empty string)
 ```
 
 API Specification
@@ -107,3 +118,4 @@ Maintainers
 -----------
 
 * Étienne Lafarge <etienne@rythm.co>
+* Max-Pol Le Brun <maxpol_at_morpheo.co
