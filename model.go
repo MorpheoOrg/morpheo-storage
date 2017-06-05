@@ -48,6 +48,7 @@ const (
 	AlgoModelName    = "algo"
 	DataModelName    = "data"
 	ModelModelName   = "model"
+	DevilMockUUID    = "66666666-6666-6666-6666-666666666666"
 )
 
 const (
@@ -86,22 +87,29 @@ var (
 )
 
 // Model contains methods to interact with models stored in base
-type Model struct {
+type Model interface {
+	Insert(instance interface{}) error
+	List(instanceList interface{}, page, pageSize int) error
+	GetOne(instance interface{}, id uuid.UUID) error
+}
+
+// SQLModel interacts with a postgreSQL database
+type SQLModel struct {
 	*sqlx.DB
 
 	name string
 }
 
-// NewModel creates a Model instance, bound to a given database
-func NewModel(db *sqlx.DB, name string) (*Model, error) {
+// NewSQLModel creates a Model instance, bound to a given database
+func NewSQLModel(db *sqlx.DB, name string) (*SQLModel, error) {
 	if _, ok := modelNames[name]; !ok {
 		return nil, fmt.Errorf("Unknown model %s", name)
 	}
-	return &Model{db, name}, nil
+	return &SQLModel{db, name}, nil
 }
 
 // Insert inserts a given model instance in base
-func (m *Model) Insert(instance interface{}) error {
+func (m *SQLModel) Insert(instance interface{}) error {
 	if insertStatement, ok := insertStatements[m.name]; ok {
 		if _, err := m.NamedExec(insertStatement, instance); err != nil {
 			return err
@@ -113,7 +121,7 @@ func (m *Model) Insert(instance interface{}) error {
 }
 
 // List lists all model instances in base, pagination included
-func (m *Model) List(instanceList interface{}, page, pageSize int) error {
+func (m *SQLModel) List(instanceList interface{}, page, pageSize int) error {
 	if selectTemplate, ok := selectTemplates[m.name]; ok {
 		if err := m.Select(instanceList, fmt.Sprintf(selectTemplate, pageSize, page*pageSize)); err != nil {
 			return fmt.Errorf("[model] Error retrieving %s list from database: %s", m.name, err)
@@ -125,13 +133,56 @@ func (m *Model) List(instanceList interface{}, page, pageSize int) error {
 }
 
 // GetOne retrieves a model instance in base using its uuid
-func (m *Model) GetOne(instance interface{}, id uuid.UUID) error {
+func (m *SQLModel) GetOne(instance interface{}, id uuid.UUID) error {
 	if getOneStatement, ok := getOneStatements[m.name]; ok {
 		if err := m.Get(instance, getOneStatement, id); err != nil {
 			return fmt.Errorf("[model] Error retrieving %s %s from database: %s", m.name, id, err)
 		}
 	} else {
 		return fmt.Errorf("[model] No get one statement found for model %s", m.name)
+	}
+	return nil
+}
+
+// MockedModel is a mock of SQLModel for tests
+type MockedModel struct {
+	name string
+}
+
+// NewMockedModel creates a Model instance mock
+func NewMockedModel(name string) (*MockedModel, error) {
+	if _, ok := modelNames[name]; !ok {
+		return nil, fmt.Errorf("Unknown model %s", name)
+	}
+	return &MockedModel{name}, nil
+}
+
+// Insert inserts a given model instance in base
+func (m *MockedModel) Insert(instance interface{}) error {
+	if _, ok := insertStatements[m.name]; ok {
+	} else {
+		return fmt.Errorf("[model] No insert statement found for model %s", m.name)
+	}
+	return nil
+}
+
+// List lists all model instances in base, pagination included
+func (m *MockedModel) List(instanceList interface{}, page, pageSize int) error {
+	if _, ok := selectTemplates[m.name]; ok {
+	} else {
+		return fmt.Errorf("[model] No list select statement template found for model %s", m.name)
+	}
+	return nil
+}
+
+// GetOne retrieves a model instance in base using its uuid
+func (m *MockedModel) GetOne(instance interface{}, id uuid.UUID) error {
+	if _, ok := getOneStatements[m.name]; ok {
+	} else {
+		return fmt.Errorf("[model] No get one statement found for model %s", m.name)
+	}
+	if id.String() == DevilMockUUID {
+		return fmt.Errorf("[model] Runnin' With the Devil! sql: no rows in result set")
 	}
 	return nil
 }
