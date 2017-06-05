@@ -61,72 +61,70 @@ import (
 
 // Available HTTP routes
 const (
-	rootRoute        = "/"
-	healthRoute      = "/health"
-	problemListRoute = "/problem"
-	problemRoute     = "/problem/:uuid"
-	problemBlobRoute = "/problem/:uuid/blob"
-	dataListRoute    = "/data"
-	dataRoute        = "/data/:uuid"
-	dataBlobRoute    = "/data/:uuid/blob"
-	algoListRoute    = "/algo"
-	algoRoute        = "/algo/:uuid"
-	algoBlobRoute    = "/algo/:uuid/blob"
-	modelListRoute   = "/model"
-	modelRoute       = "/model/:uuid"
-	modelBlobRoute   = "/model/:uuid/blob"
+	RootRoute        = "/"
+	HealthRoute      = "/health"
+	ProblemListRoute = "/problem"
+	ProblemRoute     = "/problem/:uuid"
+	ProblemBlobRoute = "/problem/:uuid/blob"
+	DataListRoute    = "/data"
+	DataRoute        = "/data/:uuid"
+	DataBlobRoute    = "/data/:uuid/blob"
+	AlgoListRoute    = "/algo"
+	AlgoRoute        = "/algo/:uuid"
+	AlgoBlobRoute    = "/algo/:uuid/blob"
+	ModelListRoute   = "/model"
+	ModelRoute       = "/model/:uuid"
+	ModelBlobRoute   = "/model/:uuid/blob"
 )
 
 const (
-	StrFieldMaxLength = 255 // in bytes
-	IntFieldMaxLength = 20  // in bytes
+	strFieldMaxLength = 255 // in bytes
+	intFieldMaxLength = 20  // in bytes
 )
 
-var (
-	ErrorInvalidForm = errors.New("Invalid Form")
-)
-
-type apiServer struct {
-	conf         *StorageConfig
-	blobStore    common.BlobStore
-	problemModel *Model
-	algoModel    *Model
-	modelModel   *Model
-	dataModel    *Model
+// APIServer represents the API configurations
+type APIServer struct {
+	Conf         *StorageConfig
+	BlobStore    common.BlobStore
+	ProblemModel Model
+	AlgoModel    Model
+	ModelModel   Model
+	DataModel    Model
 }
 
-func (s *apiServer) configureRoutes(app *iris.Framework, authentication iris.HandlerFunc) {
+// ConfigureRoutes links the urls with the func and set authentication
+func (s *APIServer) ConfigureRoutes(app *iris.Framework, authentication iris.HandlerFunc) {
 	// Misc.
-	app.Get(rootRoute, s.index)
-	app.Get(healthRoute, s.health)
+	app.Get(RootRoute, s.index)
+	app.Get(HealthRoute, s.health)
 
 	// Problem
-	app.Get(problemListRoute, authentication, s.getProblemList)
-	app.Post(problemListRoute, authentication, s.postProblem)
-	app.Get(problemRoute, authentication, s.getProblem)
-	app.Get(problemBlobRoute, authentication, s.getProblemBlob)
+	app.Get(ProblemListRoute, authentication, s.getProblemList)
+	app.Post(ProblemListRoute, authentication, s.postProblem)
+	app.Get(ProblemRoute, authentication, s.getProblem)
+	app.Get(ProblemBlobRoute, authentication, s.getProblemBlob)
 
 	// Algo
-	app.Get(algoListRoute, authentication, s.getAlgoList)
-	app.Post(algoListRoute, authentication, s.postAlgo)
-	app.Get(algoRoute, authentication, s.getAlgo)
-	app.Get(algoBlobRoute, authentication, s.getAlgoBlob)
+	app.Get(AlgoListRoute, authentication, s.getAlgoList)
+	app.Post(AlgoListRoute, authentication, s.postAlgo)
+	app.Get(AlgoRoute, authentication, s.getAlgo)
+	app.Get(AlgoBlobRoute, authentication, s.getAlgoBlob)
 
 	// Model
-	app.Get(modelListRoute, authentication, s.getModelList)
-	app.Post(modelListRoute, authentication, s.postModel)
-	app.Get(modelRoute, authentication, s.getModel)
-	app.Get(modelBlobRoute, authentication, s.getModelBlob)
+	app.Get(ModelListRoute, authentication, s.getModelList)
+	app.Post(ModelListRoute, authentication, s.postModel)
+	app.Get(ModelRoute, authentication, s.getModel)
+	app.Get(ModelBlobRoute, authentication, s.getModelBlob)
 
 	// Data
-	app.Get(dataListRoute, authentication, s.getDataList)
-	app.Post(dataListRoute, authentication, s.postData)
-	app.Get(dataRoute, authentication, s.getData)
-	app.Get(dataBlobRoute, authentication, s.getDataBlob)
+	app.Get(DataListRoute, authentication, s.getDataList)
+	app.Post(DataListRoute, authentication, s.postData)
+	app.Get(DataRoute, authentication, s.getData)
+	app.Get(DataBlobRoute, authentication, s.getDataBlob)
 }
 
-// Database migration routine
-func runMigrations(db *sqlx.DB, migrationDir string, rollback bool) (int, error) {
+// RunMigrations applies migrations in migrationDir
+func RunMigrations(db *sqlx.DB, migrationDir string, rollback bool) (int, error) {
 	migrate.SetTable(migrationTable)
 
 	migrations := &migrate.FileMigrationSource{
@@ -143,6 +141,17 @@ func runMigrations(db *sqlx.DB, migrationDir string, rollback bool) (int, error)
 	return migrate.ExecMax(db.DB, "postgres", migrations, operation, limit)
 }
 
+// SetAuthentication returns the app authentication
+func SetAuthentication(user, password string) iris.HandlerFunc {
+	authConfig := basicauth.Config{
+		Users:      map[string]string{user: password},
+		Realm:      "Authorization Required",
+		ContextKey: "mycustomkey",
+		Expires:    time.Duration(30) * time.Minute,
+	}
+	return basicauth.New(authConfig)
+}
+
 func main() {
 	// Parses CLI flags to generate the API config
 	conf := NewStorageConfig()
@@ -152,13 +161,7 @@ func main() {
 	app.Adapt(iris.DevLogger(), httprouter.New())
 
 	// Iris authentication
-	authConfig := basicauth.Config{
-		Users:      map[string]string{conf.APIUser: conf.APIPassword},
-		Realm:      "Authorization Required",
-		ContextKey: "mycustomkey",
-		Expires:    time.Duration(30) * time.Minute,
-	}
-	authentication := basicauth.New(authConfig)
+	authentication := SetAuthentication(conf.APIUser, conf.APIPassword)
 
 	// Iris CORS middleware
 	corsMiddleware := cors.New(cors.Options{
@@ -187,48 +190,48 @@ func main() {
 		log.Fatalf("Cannot open connection to database: %s", err)
 	}
 
-	n, err := runMigrations(db, conf.DBMigrationsDir, conf.DBRollback)
+	n, err := RunMigrations(db, conf.DBMigrationsDir, conf.DBRollback)
 	if err != nil {
 		log.Fatalf("Cannot apply database migrations: %s", err)
 	}
 	log.Printf("Applied %d database migrations successfully", n)
 
 	// Model configuration
-	problemModel, err := NewModel(db, ProblemModelName)
+	problemModel, err := NewSQLModel(db, ProblemModelName)
 	if err != nil {
 		log.Fatalf("Cannot create model %s: %s", ProblemModelName, err)
 	}
 
-	algoModel, err := NewModel(db, AlgoModelName)
+	algoModel, err := NewSQLModel(db, AlgoModelName)
 	if err != nil {
 		log.Fatalf("Cannot create model %s: %s", AlgoModelName, err)
 	}
 
-	modelModel, err := NewModel(db, ModelModelName)
+	modelModel, err := NewSQLModel(db, ModelModelName)
 	if err != nil {
 		log.Fatalf("Cannot create model %s: %s", ModelModelName, err)
 	}
 
-	dataModel, err := NewModel(db, DataModelName)
+	dataModel, err := NewSQLModel(db, DataModelName)
 	if err != nil {
 		log.Fatalf("Cannot create model %s: %s", DataModelName, err)
 	}
 
-	//Set BlobStore
-	blobStore, err := setBlobStore(conf.DataDir, conf.AWSBucket, conf.AWSRegion)
+	// Set BlobStore
+	blobStore, err := SetBlobStore(conf.DataDir, conf.AWSBucket, conf.AWSRegion)
 	if err != nil {
-		log.Fatalf("Cannot set blobStore: ", err)
+		log.Fatalf("Cannot set blobStore: %s", err)
 	}
 
-	api := &apiServer{
-		conf:         conf,
-		blobStore:    blobStore,
-		problemModel: problemModel,
-		algoModel:    algoModel,
-		modelModel:   modelModel,
-		dataModel:    dataModel,
+	api := &APIServer{
+		Conf:         conf,
+		BlobStore:    blobStore,
+		ProblemModel: problemModel,
+		AlgoModel:    algoModel,
+		ModelModel:   modelModel,
+		DataModel:    dataModel,
 	}
-	api.configureRoutes(app, authentication)
+	api.ConfigureRoutes(app, authentication)
 
 	// Main server loop
 	if conf.TLSOn() {
@@ -239,52 +242,42 @@ func main() {
 }
 
 // misc routes
-func (s *apiServer) index(c *iris.Context) {
-	c.JSON(iris.StatusOK, []string{
-		rootRoute,
-		healthRoute,
-		problemListRoute,
-		problemRoute,
-		problemBlobRoute,
-		dataListRoute,
-		dataRoute,
-		dataBlobRoute,
-		algoListRoute,
-		algoRoute,
-		algoBlobRoute,
-		modelListRoute,
-		modelRoute,
-		modelBlobRoute,
+func (s *APIServer) index(c *iris.Context) {
+	c.JSON(200, []string{
+		RootRoute,
+		HealthRoute,
+		ProblemListRoute,
+		ProblemRoute,
+		ProblemBlobRoute,
+		DataListRoute,
+		DataRoute,
+		DataBlobRoute,
+		AlgoListRoute,
+		AlgoRoute,
+		AlgoBlobRoute,
+		ModelListRoute,
+		ModelRoute,
+		ModelBlobRoute,
 	})
 }
 
-func (s *apiServer) health(c *iris.Context) {
+func (s *APIServer) health(c *iris.Context) {
 	// TODO: check database and blob store connectivity here
-	c.JSON(iris.StatusOK, map[string]string{"status": "ok"})
+	c.JSON(200, map[string]string{"status": "ok"})
 }
 
 // Generic blob routes and utilities
-func (s *apiServer) getBlobKey(blobType string, blobID uuid.UUID) string {
+func (s *APIServer) getBlobKey(blobType string, blobID uuid.UUID) string {
 	return fmt.Sprintf("%s/%s", blobType, blobID)
-}
-
-func (s *apiServer) checkUUID(candidate string) (id uuid.UUID, err error) {
-	if !strings.Contains(candidate, "-") {
-		return uuid.Nil, fmt.Errorf("Invalid UUID: %s", candidate)
-	}
-	if id, err = uuid.FromString(candidate); err != nil {
-		return uuid.Nil, fmt.Errorf("Invalid UUID: %s", candidate)
-	}
-	return id, nil
 }
 
 func readMultipartField(formName string, part io.ReadCloser, fieldType string) (string, error) {
 	defer part.Close()
 	var maxLength int64
 	if fieldType == "int" {
-		maxLength = IntFieldMaxLength
+		maxLength = intFieldMaxLength
 	} else {
-		maxLength = StrFieldMaxLength
+		maxLength = strFieldMaxLength
 	}
 	buf := make([]byte, maxLength)
 	offset := 0
@@ -309,27 +302,27 @@ func readMultipartField(formName string, part io.ReadCloser, fieldType string) (
 	return string(buf[:offset]), nil
 }
 
-func (s *apiServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.Context) error {
+func (s *APIServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.Context) (int, error) {
 	size, err := strconv.ParseInt(c.Request.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
-		return err
+		return 400, fmt.Errorf("Error parsing header 'Content-Length': should be blob size in bytes. err: %s", err)
 	}
-	err = s.blobStore.Put(s.getBlobKey(blobType, id), c.Request.Body, size)
+	err = s.BlobStore.Put(s.getBlobKey(blobType, id), c.Request.Body, size)
 	defer c.Request.Body.Close()
 	if err != nil {
-		return err
+		return 500, err
 	}
-	return nil
+	return 201, nil
 }
 
-func (s *apiServer) streamMultipartToStorage(blobType string, id uuid.UUID, mff *common.MultipartFormFields, c *iris.Context) (int, error) {
+func (s *APIServer) streamBlobMultipartToStorage(blobType string, id uuid.UUID, mff *common.MultipartFormFields, c *iris.Context) (int, error) {
 	mediaType, params, err := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
 	if err != nil {
-		return iris.StatusBadRequest, fmt.Errorf("Error parsing header \"Content-Type\": %s", err)
+		return 400, fmt.Errorf("Error parsing header \"Content-Type\": %s", err)
 	}
 
 	if !strings.HasPrefix(mediaType, "multipart/") {
-		return iris.StatusBadRequest, fmt.Errorf("Invalid media type: %s. Should be: multipart/form-data", mediaType)
+		return 400, fmt.Errorf("Invalid media type: %s. Should be: multipart/form-data", mediaType)
 	}
 
 	reader := multipart.NewReader(c.Request.Body, params["boundary"])
@@ -341,66 +334,60 @@ func (s *apiServer) streamMultipartToStorage(blobType string, id uuid.UUID, mff 
 			break
 		}
 		if err != nil {
-			return iris.StatusBadRequest, fmt.Errorf("Error parsing multipart data: %s", err)
+			return 400, fmt.Errorf("Error parsing multipart data: %s", err)
 		}
 
 		switch formName := part.FormName(); formName {
 		case "description":
 			mff.Description, err = readMultipartField(formName, part, "string")
 			if err != nil {
-				return iris.StatusBadRequest, fmt.Errorf("Error reading description: %s", err)
+				return 400, fmt.Errorf("Error reading description: %s", err)
 			}
 		case "name":
 			mff.Name, err = readMultipartField(formName, part, "string")
 			if err != nil {
-				return iris.StatusBadRequest, fmt.Errorf("Error reading Name: %s", err)
+				return 400, fmt.Errorf("Error reading Name: %s", err)
 			}
 		case "size":
 			sizeStr, err := readMultipartField(formName, part, "int")
 			if err != nil {
-				return iris.StatusBadRequest, fmt.Errorf("Error reading size field: %s", err)
+				return 400, fmt.Errorf("Error reading size field: %s", err)
 			}
 			mff.Size, err = strconv.ParseInt(sizeStr, 10, 64)
 			if err != nil {
-				return iris.StatusBadRequest, fmt.Errorf("Error parsing size field to integer: %s", err)
+				return 400, fmt.Errorf("Error parsing size field to integer: %s", err)
 			}
 		default:
 			defer part.Close()
 			if formName == "blob" {
 				err := common.CheckFormFields(blobType, mff)
 				if err != nil {
-					return iris.StatusBadRequest, fmt.Errorf("%s", err)
+					return 400, fmt.Errorf("%s", err)
 				}
-				err = s.blobStore.Put(s.getBlobKey(blobType, id), part, mff.Size)
+				err = s.BlobStore.Put(s.getBlobKey(blobType, id), part, mff.Size)
 				if err != nil {
-					return iris.StatusInternalServerError, fmt.Errorf("Error writing blob content to storage: %s", err)
+					return 500, fmt.Errorf("Error writing blob content to storage: %s", err)
 				}
-				return iris.StatusOK, nil
-			} else {
-				return iris.StatusBadRequest, fmt.Errorf("Unknown field \"%s\"", part.FormName())
+				return 200, nil
 			}
+
+			return 400, fmt.Errorf("Unknown field \"%s\"", part.FormName())
 		}
 	}
-	return iris.StatusBadRequest, errors.New("Premature EOF while parsing request")
+	return 400, errors.New("Premature EOF while parsing request")
 }
 
-func (s *apiServer) streamBlobFromStorage(blobType string, c *iris.Context) {
-	blobID, err := s.checkUUID(c.Param("uuid"))
+func (s *APIServer) streamBlobFromStorage(blobType string, blobID uuid.UUID, c *iris.Context) {
+	blobReader, err := s.BlobStore.Get(s.getBlobKey(blobType, blobID))
 	if err != nil {
-		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error parsing %s uuid: %s", blobType, err)))
-		return
-	}
-
-	blobReader, err := s.blobStore.Get(s.getBlobKey(blobType, blobID))
-	if err != nil {
-		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error retrieving %s %s: %s", blobType, blobID, err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving %s %s: %s", blobType, blobID, err)))
 		return
 	}
 	defer blobReader.Close()
 	c.StreamWriter(func(w io.Writer) bool {
 		_, err := io.Copy(w, blobReader)
 		if err != nil {
-			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading %s %s: %s", blobType, blobID, err)))
+			c.JSON(500, common.NewAPIError(fmt.Sprintf("Error reading %s %s: %s", blobType, blobID, err)))
 			return false
 		}
 		return false
@@ -408,274 +395,307 @@ func (s *apiServer) streamBlobFromStorage(blobType string, c *iris.Context) {
 }
 
 // Problem related routes
-func (s *apiServer) getProblemList(c *iris.Context) {
+func (s *APIServer) getProblemList(c *iris.Context) {
 	problems := make([]common.Problem, 0, 30)
-	err := s.problemModel.List(&problems, 0, 30)
+	err := s.ProblemModel.List(&problems, 0, 30)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving problem list: %s", err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving problem list: %s", err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"page":   0,
 		"length": len(problems),
 		"items":  problems,
 	})
 }
 
-func (s *apiServer) postProblem(c *iris.Context) {
+func (s *APIServer) postProblem(c *iris.Context) {
 	problem := common.NewProblem()
-	err := s.streamBlobToStorage("problem", problem.ID, c)
+	statusCode, err := s.streamBlobToStorage("problem", problem.ID, c)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error uploading problem - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading problem - %s", err)))
 		return
 	}
-	err = s.problemModel.Insert(problem)
+	err = s.ProblemModel.Insert(problem)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting problem %s in database: %s", problem.ID, err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting problem %s in database: %s", problem.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, problem)
+	c.JSON(201, problem)
 }
 
-func (s *apiServer) getProblemInstance(idString string) (*common.Problem, error) {
-	id, err := uuid.FromString(idString)
-	if err != nil {
-		return nil, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", idString, err))
-	}
-
+func (s *APIServer) getProblemInstance(id uuid.UUID) (*common.Problem, error) {
 	problem := common.Problem{}
-	err = s.problemModel.GetOne(&problem, id)
+	err := s.ProblemModel.GetOne(&problem, id)
 	if err != nil {
 		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", id, err))
 	}
 	return &problem, nil
 }
 
-func (s *apiServer) getProblem(c *iris.Context) {
-	problem, err := s.getProblemInstance(c.Param("uuid"))
+func (s *APIServer) getProblem(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, problem)
+	problem, err := s.getProblemInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	c.JSON(200, problem)
 }
 
-func (s *apiServer) getProblemBlob(c *iris.Context) {
-	_, err := s.getProblemInstance(c.Param("uuid"))
+func (s *APIServer) getProblemBlob(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+	_, err = s.getProblemInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", c.Param("uuid"), err)))
 		return
 	}
 
-	s.streamBlobFromStorage("problem", c)
+	s.streamBlobFromStorage("problem", id, c)
 }
 
 // Algorithm related routes
-func (s *apiServer) getAlgoList(c *iris.Context) {
+func (s *APIServer) getAlgoList(c *iris.Context) {
 	algos := make([]common.Algo, 0, 30)
-	err := s.algoModel.List(&algos, 0, 30)
+	err := s.AlgoModel.List(&algos, 0, 30)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving algo list: %s", err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving algo list: %s", err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"page":   0,
 		"length": len(algos),
 		"items":  algos,
 	})
 }
 
-func (s *apiServer) postAlgo(c *iris.Context) {
+func (s *APIServer) postAlgo(c *iris.Context) {
 	algo := common.NewAlgo()
 	mff := common.MultipartFormFields{}
-	statusCode, err := s.streamMultipartToStorage("algo", algo.ID, &mff, c)
+	statusCode, err := s.streamBlobMultipartToStorage("algo", algo.ID, &mff, c)
 	if err != nil {
 		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading algo - %s", err)))
 		return
 	}
 	algo.Name = mff.Name
-	err = s.algoModel.Insert(algo)
+	err = s.AlgoModel.Insert(algo)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting algo %s in database: %s", algo.ID, err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting algo %s in database: %s", algo.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, algo)
+	c.JSON(201, algo)
 }
 
-func (s *apiServer) getAlgoInstance(idString string) (*common.Algo, error) {
-	id, err := uuid.FromString(idString)
-	if err != nil {
-		return nil, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", idString, err))
-	}
-
+func (s *APIServer) getAlgoInstance(id uuid.UUID) (*common.Algo, error) {
 	algo := common.Algo{}
-	err = s.algoModel.GetOne(&algo, id)
+	err := s.AlgoModel.GetOne(&algo, id)
 	if err != nil {
 		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving algo %s: %s", id, err))
 	}
 	return &algo, nil
 }
 
-func (s *apiServer) getAlgo(c *iris.Context) {
-	algo, err := s.getAlgoInstance(c.Param("uuid"))
+func (s *APIServer) getAlgo(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving algo %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, algo)
+	algo, err := s.getAlgoInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving algo %s: %s", c.Param("uuid"), err)))
+		return
+	}
+	c.JSON(200, algo)
 }
 
-func (s *apiServer) getAlgoBlob(c *iris.Context) {
-	_, err := s.getAlgoInstance(c.Param("uuid"))
+func (s *APIServer) getAlgoBlob(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving algo %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
 		return
 	}
 
-	s.streamBlobFromStorage("algo", c)
+	_, err = s.getAlgoInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving algo %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	s.streamBlobFromStorage("algo", id, c)
 }
 
 // Model related routes
-func (s *apiServer) getModelList(c *iris.Context) {
+func (s *APIServer) getModelList(c *iris.Context) {
 	models := make([]common.Model, 0, 30)
-	err := s.modelModel.List(&models, 0, 30)
+	err := s.ModelModel.List(&models, 0, 30)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving model list: %s", err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving model list: %s", err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"page":   0,
 		"length": len(models),
 		"items":  models,
 	})
 }
 
-func (s *apiServer) postModel(c *iris.Context) {
-	algo, err := s.getAlgoInstance(c.URLParam("algo"))
+func (s *APIServer) postModel(c *iris.Context) {
+	id, err := uuid.FromString(c.URLParam("algo"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error uploading model: algorithm %s not found: %s", c.Param("algo"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+	algo, err := s.getAlgoInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error uploading model: algorithm %s not found: %s", c.URLParam("algo"), err)))
 		return
 	}
 
 	model := common.NewModel(algo)
-	err = s.streamBlobToStorage("model", model.ID, c)
+	statusCode, err := s.streamBlobToStorage("model", model.ID, c)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error uploading model - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading model - %s", err)))
 		return
 	}
-	err = s.modelModel.Insert(model)
+	err = s.ModelModel.Insert(model)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting model %s in database: %s", model.ID, err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting model %s in database: %s", model.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, model)
+	c.JSON(201, model)
 }
 
-func (s *apiServer) getModelInstance(idString string) (*common.Model, error) {
-	id, err := uuid.FromString(idString)
-	if err != nil {
-		return nil, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", idString, err))
-	}
-
+func (s *APIServer) getModelInstance(id uuid.UUID) (*common.Model, error) {
 	model := common.Model{}
-	err = s.algoModel.GetOne(&model, id)
+	err := s.AlgoModel.GetOne(&model, id)
 	if err != nil {
 		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", id, err))
 	}
 	return &model, nil
 }
 
-func (s *apiServer) getModel(c *iris.Context) {
-	model, err := s.getModelInstance(c.Param("uuid"))
+func (s *APIServer) getModel(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, model)
+	model, err := s.getModelInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	c.JSON(200, model)
 }
 
-func (s *apiServer) getModelBlob(c *iris.Context) {
-	_, err := s.getModelInstance(c.Param("uuid"))
+func (s *APIServer) getModelBlob(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+	_, err = s.getModelInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", c.Param("uuid"), err)))
 		return
 	}
 
-	s.streamBlobFromStorage("model", c)
+	s.streamBlobFromStorage("model", id, c)
 }
 
 // Data related routes
-func (s *apiServer) getDataList(c *iris.Context) {
+func (s *APIServer) getDataList(c *iris.Context) {
 	datas := make([]common.Data, 0, 30)
-	err := s.dataModel.List(&datas, 0, 30)
+	err := s.DataModel.List(&datas, 0, 30)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving data list: %s", err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving data list: %s", err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"page":   0,
 		"length": len(datas),
 		"items":  datas,
 	})
 }
 
-func (s *apiServer) postData(c *iris.Context) {
+func (s *APIServer) postData(c *iris.Context) {
 	data := common.NewData()
-	err := s.streamBlobToStorage("data", data.ID, c)
+	statusCode, err := s.streamBlobToStorage("data", data.ID, c)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error uploading data %s: %s", data.ID, err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading data - %s", err)))
 		return
 	}
-	err = s.dataModel.Insert(data)
+	err = s.DataModel.Insert(data)
 	if err != nil {
-		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting data %s in database: %s", data.ID, err)))
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting data %s in database: %s", data.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, data)
+	c.JSON(201, data)
 }
 
-func (s *apiServer) getDataInstance(idString string) (*common.Data, error) {
-	id, err := uuid.FromString(idString)
-	if err != nil {
-		return nil, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", idString, err))
-	}
-
+func (s *APIServer) getDataInstance(id uuid.UUID) (*common.Data, error) {
 	data := common.Data{}
-	err = s.dataModel.GetOne(&data, id)
+	err := s.DataModel.GetOne(&data, id)
 	if err != nil {
 		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving data %s: %s", id, err))
 	}
 	return &data, nil
 }
 
-func (s *apiServer) getData(c *iris.Context) {
-	data, err := s.getDataInstance(c.Param("uuid"))
+func (s *APIServer) getData(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving data %s: %s", c.Param("uuid"), err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
 		return
 	}
 
-	c.JSON(iris.StatusOK, data)
-}
-
-func (s *apiServer) getDataBlob(c *iris.Context) {
-	_, err := s.getDataInstance(c.Param("uuid"))
+	data, err := s.getDataInstance(id)
 	if err != nil {
-		c.JSON(iris.StatusNotFound, common.NewAPIError(fmt.Sprintf("Error retrieving data %s: %s", c.Param("uuid"), err)))
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving data %s: %s", c.Param("uuid"), err)))
 		return
 	}
 
-	s.streamBlobFromStorage("data", c)
+	c.JSON(200, data)
 }
 
-func setBlobStore(dataDir string, awsBucket string, awsRegion string) (common.BlobStore, error) {
+func (s *APIServer) getDataBlob(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
+	if err != nil {
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+
+	_, err = s.getDataInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving data %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	s.streamBlobFromStorage("data", id, c)
+}
+
+// SetBlobStore defines the blobstore type (local, fake, S3)
+func SetBlobStore(dataDir string, awsBucket string, awsRegion string) (common.BlobStore, error) {
 	switch {
 	case awsBucket == "" || awsRegion == "":
 		log.Println(fmt.Sprintf("[LocalBlobStore] Data is stored locally in directory: %s", dataDir))
 		return common.NewLocalBlobStore(dataDir)
+	case awsBucket == "fake" && awsRegion == "fake":
+		return common.NewFakeBlobStore(dataDir)
 	default:
 		return common.NewS3BlobStore(awsBucket, awsRegion)
 	}
