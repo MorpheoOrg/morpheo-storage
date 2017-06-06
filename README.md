@@ -97,12 +97,12 @@ though).
 
 * Posting a problem (assuming storage is running on `localhost:8080`):
 ```shell
-curl --data-binary "@/path/to/problem.tar.gz" http://localhost:8080/data
+curl --data-binary "@/path/to/problem.tar.gz" -u user:password http://localhost:8080/data
 ```
 
 * Retrieving a piece of data (assuming storage is running on `localhost:8080`):
 ```shell
-curl http://localhost:8080/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
+curl -u user:password http://localhost:8080/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
 ```
 
 Container Specification
