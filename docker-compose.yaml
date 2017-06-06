@@ -1,0 +1,47 @@
+version: '2'
+
+services:
+  # Storage
+  storage:
+    build: ./
+    image: storage
+    container_name: storage
+    restart: unless-stopped
+    command: -host 0.0.0.0 -port 80 -user ${STORAGE_AUTH_USER} -password ${STORAGE_AUTH_PASSWORD}
+    ## Stops the container from taking up all the cache memory on big file
+    ## uploads
+    mem_limit: 100000000
+    memswap_limit: 100000000
+    volumes:
+    - ./data/storage:/data
+    # - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    ports:
+    - "${STORAGE_PORT}:80/tcp"
+    networks:
+    - internal
+    depends_on:
+    - postgres
+
+  # Postgres instance for the storage service
+  postgres:
+    image: postgres:alpine
+    container_name: db-postgres
+    mem_limit: 200000000
+    memswap_limit: 0
+    volumes:
+    - /var/lib/postgresql/docker:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_PASSWORD=tooshort
+    - POSTGRES_USER=storage
+    - POSTGRES_DB=morpheo_storage
+    networks:
+      - internal
+
+networks:
+  # Accessible from the outside (a mock of what some call "the Internet")
+  internal:
+    driver: bridge
+
+volumes:
+  compute_datadir:
+    driver: local

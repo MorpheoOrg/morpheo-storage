@@ -1,6 +1,6 @@
 FROM scratch
 
-ADD build/target /storage-api
+ADD build/target /storage
 ADD migrations /migrations
 
-ENTRYPOINT ["/storage-api"]
+ENTRYPOINT ["/storage"]
