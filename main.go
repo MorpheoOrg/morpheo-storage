@@ -329,7 +329,7 @@ func (s *apiServer) postProblem(c *iris.Context) {
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting problem %s in database: %s", problem.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, map[string]string{"status": "problem created", "uuid": problem.ID.String()})
+	c.JSON(iris.StatusCreated, problem)
 }
 
 func (s *apiServer) getProblemInstance(idString string) (*common.Problem, error) {
@@ -393,7 +393,7 @@ func (s *apiServer) postAlgo(c *iris.Context) {
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting algo %s in database: %s", algo.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, map[string]string{"status": "algo created", "uuid": algo.ID.String()})
+	c.JSON(iris.StatusCreated, algo)
 }
 
 func (s *apiServer) getAlgoInstance(idString string) (*common.Algo, error) {
@@ -463,7 +463,7 @@ func (s *apiServer) postModel(c *iris.Context) {
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting model %s in database: %s", model.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, map[string]string{"status": "model created", "uuid": model.ID.String()})
+	c.JSON(iris.StatusCreated, model)
 }
 
 func (s *apiServer) getModelInstance(idString string) (*common.Model, error) {
@@ -527,7 +527,7 @@ func (s *apiServer) postData(c *iris.Context) {
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting data %s in database: %s", data.ID, err)))
 	}
-	c.JSON(iris.StatusCreated, map[string]string{"status": "data created", "uuid": data.ID.String()})
+	c.JSON(iris.StatusCreated, data)
 }
 
 func (s *apiServer) getDataInstance(idString string) (*common.Data, error) {
