@@ -1,23 +1,23 @@
 /*
  * Copyright Morpheo Org. 2017
- * 
+ *
  * contact@morpheo.co
- * 
+ *
  * This software is part of the Morpheo project, an open-source machine
  * learning platform.
- * 
+ *
  * This software is governed by the CeCILL license, compatible with the
  * GNU GPL, under French law and abiding by the rules of distribution of
  * free software. You can  use, modify and/ or redistribute the software
  * under the terms of the CeCILL license as circulated by CEA, CNRS and
  * INRIA at the following URL "http://www.cecill.info".
- * 
+ *
  * As a counterpart to the access to the source code and  rights to copy,
  * modify and redistribute granted by the license, users are provided only
  * with a limited warranty  and the software's author,  the holder of the
  * economic rights,  and the successive licensors  have only  limited
  * liability.
- * 
+ *
  * In this respect, the user's attention is drawn to the risks associated
  * with loading,  using,  modifying and/or developing or reproducing the
  * software by the user in light of its specific status of free software,
@@ -28,7 +28,7 @@
  * requirements in conditions enabling the security of their systems and/or
  * data to be ensured and,  more generally, to use and operate it in the
  * same conditions as regards security.
- * 
+ *
  * The fact that you are presently reading this means that you have had
  * knowledge of the CeCILL license and that you accept its terms.
  */
@@ -59,19 +59,19 @@ var (
 	// SQL statements
 	insertStatements = map[string]string{
 		"problem": `INSERT INTO problem (uuid, created_at, author) VALUES (:uuid, :created_at, :author)`,
-		"algo":    `INSERT INTO algo (uuid, created_at, author) VALUES (:uuid, :created_at, :author)`,
+		"algo":    `INSERT INTO algo (uuid, created_at, name, author) VALUES (:uuid, :created_at, :name, :author)`,
 		"model":   `INSERT INTO model (uuid, algo, created_at, author) VALUES (:uuid, :algo, :created_at, :author)`,
 		"data":    `INSERT INTO data (uuid, created_at, owner) VALUES (:uuid, :created_at, :owner)`,
 	}
 	selectTemplates = map[string]string{
 		"problem": "SELECT uuid, created_at, author FROM problem ORDER BY created_at DESC LIMIT %d OFFSET %d",
-		"algo":    "SELECT uuid, created_at, author FROM algo ORDER BY created_at DESC LIMIT %d OFFSET %d",
+		"algo":    "SELECT uuid, created_at, name, author FROM algo ORDER BY created_at DESC LIMIT %d OFFSET %d",
 		"model":   "SELECT uuid, algo, created_at, author FROM model ORDER BY created_at DESC LIMIT %d OFFSET %d",
 		"data":    "SELECT uuid, created_at, owner FROM data ORDER BY created_at DESC LIMIT %d OFFSET %d",
 	}
 	getOneStatements = map[string]string{
 		"problem": `SELECT uuid, created_at, author FROM problem WHERE uuid=$1 LIMIT 1`,
-		"algo":    `SELECT uuid, created_at, author FROM algo WHERE uuid=$1 LIMIT 1`,
+		"algo":    `SELECT uuid, created_at, name, author FROM algo WHERE uuid=$1 LIMIT 1`,
 		"model":   `SELECT uuid, algo, created_at, author FROM model WHERE uuid=$1 LIMIT 1`,
 		"data":    `SELECT uuid, created_at, owner FROM data WHERE uuid=$1 LIMIT 1`,
 	}

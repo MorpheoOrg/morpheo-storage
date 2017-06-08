@@ -36,9 +36,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"mime"
+	"mime/multipart"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +77,15 @@ const (
 	modelBlobRoute   = "/model/:uuid/blob"
 )
 
+const (
+	StrFieldMaxLength = 255 // in bytes
+	IntFieldMaxLength = 20  // in bytes
+)
+
+var (
+	ErrorInvalidForm = errors.New("Invalid Form")
+)
+
 type apiServer struct {
 	conf         *StorageConfig
 	blobStore    common.BlobStore
@@ -81,6 +93,13 @@ type apiServer struct {
 	algoModel    *Model
 	modelModel   *Model
 	dataModel    *Model
+}
+
+// PostFormFields gathers the valid form fields of a POST request
+type PostFormFields struct {
+	Description string
+	Name        string
+	Size        int64
 }
 
 func (s *apiServer) configureRoutes(app *iris.Framework, authentication iris.HandlerFunc) {
@@ -266,6 +285,37 @@ func (s *apiServer) checkUUID(candidate string) (id uuid.UUID, err error) {
 	return id, nil
 }
 
+func readMultipartField(formName string, part io.ReadCloser, fieldType string) (string, error) {
+	defer part.Close()
+	var maxLength int64
+	if fieldType == "int" {
+		maxLength = IntFieldMaxLength
+	} else {
+		maxLength = StrFieldMaxLength
+	}
+	buf := make([]byte, maxLength)
+	offset := 0
+	for {
+		n, err := part.Read(buf[offset:])
+		if err != nil && err != io.EOF {
+			return "", fmt.Errorf("Error reading %s %s: %s", formName, fieldType, err)
+		}
+		offset += n
+
+		if err == io.EOF || offset == len(buf) {
+			break
+		}
+	}
+
+	// Buffer overflow test
+	rest := make([]byte, 10)
+	n, err := part.Read(rest)
+	if err != io.EOF || n > 0 {
+		return "", fmt.Errorf("Buffer overflow reading %s %s (max length is %d in base 10): %s", formName, fieldType, maxLength, err)
+	}
+	return string(buf[:offset]), nil
+}
+
 func (s *apiServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.Context) error {
 	size, err := strconv.ParseInt(c.Request.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
@@ -277,6 +327,106 @@ func (s *apiServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.C
 		return err
 	}
 	return nil
+}
+
+func (s *apiServer) streamMultipartToStorage(blobType string, id uuid.UUID, pff *PostFormFields, c *iris.Context) error {
+	mediaType, params, err := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
+	if err != nil {
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error parsing header \"Content-Type\": %s", err)))
+		return err
+	}
+
+	if !strings.HasPrefix(mediaType, "multipart/") {
+		c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Invalid media type: %s. Should be: multipart/form-data", mediaType)))
+		return ErrorInvalidForm
+	}
+
+	reader := multipart.NewReader(c.Request.Body, params["boundary"])
+	defer c.Request.Body.Close()
+
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error parsing multipart data: %s", err)))
+			return err
+		}
+
+		switch formName := part.FormName(); formName {
+		case "description":
+			pff.Description, err = readMultipartField(formName, part, "string")
+			if err != nil {
+				c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading description: %s", err)))
+				return err
+			}
+		case "name":
+			pff.Name, err = readMultipartField(formName, part, "string")
+			if err != nil {
+				c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading Name: %s", err)))
+				return err
+			}
+		case "size":
+			sizeStr, err := readMultipartField(formName, part, "int")
+			if err != nil {
+				c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error reading size field: %s", err)))
+				return err
+			}
+			pff.Size, err = strconv.ParseInt(sizeStr, 10, 64)
+			if err != nil {
+				c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error parsing size field to integer: %s", err)))
+				return err
+			}
+		default:
+			defer part.Close()
+			if formName == "blob" {
+				err := CheckFormFields(blobType, pff, c)
+				if err != nil {
+					return err
+				}
+				err = s.blobStore.Put(s.getBlobKey(blobType, id), part, pff.Size)
+				if err != nil {
+					c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Error writing blob content to storage: %s", err)))
+					return err
+				}
+				return nil
+			} else {
+				c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Unknown field \"%s\"", part.FormName())))
+				return ErrorInvalidForm
+			}
+		}
+	}
+	c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Premature EOF while parsing request")))
+	return errors.New("Premature EOF while parsing request")
+}
+
+func CheckFormFields(blobType string, pff *PostFormFields, c *iris.Context) error {
+	switch blobType {
+	case "problem":
+		if pff.Name != "" {
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Invalid Form: 'Name' is not a Problem field.")))
+			return ErrorInvalidForm
+		}
+		/*if pff.Description == "" || size == 0 {
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Invalid Form: size & description should be non-empty and send before blob.")))
+			return ErrorInvalidForm
+		}*/
+		return nil
+
+	case "algo":
+		if pff.Description != "" {
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Invalid Form: 'description' is not an Algo field.")))
+			return ErrorInvalidForm
+		}
+		if pff.Name == "" || pff.Size == 0 {
+			c.JSON(iris.StatusBadRequest, common.NewAPIError(fmt.Sprintf("Invalid Form: size & name should be non-empty and send before blob.")))
+			return ErrorInvalidForm
+		}
+		return nil
+	}
+	c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Invalid blobType")))
+	return ErrorInvalidForm
 }
 
 func (s *apiServer) streamBlobFromStorage(blobType string, c *iris.Context) {
@@ -384,11 +534,13 @@ func (s *apiServer) getAlgoList(c *iris.Context) {
 
 func (s *apiServer) postAlgo(c *iris.Context) {
 	algo := common.NewAlgo()
-	err := s.streamBlobToStorage("algo", algo.ID, c)
+	pff := PostFormFields{}
+	err := s.streamMultipartToStorage("algo", algo.ID, &pff, c)
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error uploading algo %s: %s", algo.ID, err)))
 		return
 	}
+	algo.Name = pff.Name
 	err = s.algoModel.Insert(algo)
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error inserting algo %s in database: %s", algo.ID, err)))
