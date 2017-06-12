@@ -585,7 +585,7 @@ func (s *apiServer) getAlgoBlob(c *iris.Context) {
 // Model related routes
 func (s *apiServer) getModelList(c *iris.Context) {
 	models := make([]common.Model, 0, 30)
-	err := s.algoModel.List(&models, 0, 30)
+	err := s.modelModel.List(&models, 0, 30)
 	if err != nil {
 		c.JSON(iris.StatusInternalServerError, common.NewAPIError(fmt.Sprintf("Error retrieving model list: %s", err)))
 		return

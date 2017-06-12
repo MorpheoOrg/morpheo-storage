@@ -58,22 +58,22 @@ const (
 var (
 	// SQL statements
 	insertStatements = map[string]string{
-		"problem": `INSERT INTO problem (uuid, created_at, author) VALUES (:uuid, :created_at, :author)`,
-		"algo":    `INSERT INTO algo (uuid, created_at, name, author) VALUES (:uuid, :created_at, :name, :author)`,
-		"model":   `INSERT INTO model (uuid, algo, created_at, author) VALUES (:uuid, :algo, :created_at, :author)`,
-		"data":    `INSERT INTO data (uuid, created_at, owner) VALUES (:uuid, :created_at, :owner)`,
+		"problem": `INSERT INTO problem (uuid, timestamp_upload, author) VALUES (:uuid, :timestamp_upload, :author)`,
+		"algo":    `INSERT INTO algo (uuid, timestamp_upload, name, author) VALUES (:uuid, :timestamp_upload, :name, :author)`,
+		"model":   `INSERT INTO model (uuid, algo, timestamp_upload, author) VALUES (:uuid, :algo, :timestamp_upload, :author)`,
+		"data":    `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
 	}
 	selectTemplates = map[string]string{
-		"problem": "SELECT uuid, created_at, author FROM problem ORDER BY created_at DESC LIMIT %d OFFSET %d",
-		"algo":    "SELECT uuid, created_at, name, author FROM algo ORDER BY created_at DESC LIMIT %d OFFSET %d",
-		"model":   "SELECT uuid, algo, created_at, author FROM model ORDER BY created_at DESC LIMIT %d OFFSET %d",
-		"data":    "SELECT uuid, created_at, owner FROM data ORDER BY created_at DESC LIMIT %d OFFSET %d",
+		"problem": "SELECT uuid, timestamp_upload, author FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"algo":    "SELECT uuid, timestamp_upload, name, author FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"model":   "SELECT uuid, algo, timestamp_upload, author FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"data":    "SELECT uuid, timestamp_upload, owner FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 	}
 	getOneStatements = map[string]string{
-		"problem": `SELECT uuid, created_at, author FROM problem WHERE uuid=$1 LIMIT 1`,
-		"algo":    `SELECT uuid, created_at, name, author FROM algo WHERE uuid=$1 LIMIT 1`,
-		"model":   `SELECT uuid, algo, created_at, author FROM model WHERE uuid=$1 LIMIT 1`,
-		"data":    `SELECT uuid, created_at, owner FROM data WHERE uuid=$1 LIMIT 1`,
+		"problem": `SELECT uuid, timestamp_upload, author FROM problem WHERE uuid=$1 LIMIT 1`,
+		"algo":    `SELECT uuid, timestamp_upload, name, author FROM algo WHERE uuid=$1 LIMIT 1`,
+		"model":   `SELECT uuid, algo, timestamp_upload, author FROM model WHERE uuid=$1 LIMIT 1`,
+		"data":    `SELECT uuid, timestamp_upload, owner FROM data WHERE uuid=$1 LIMIT 1`,
 	}
 
 	// Valid model names
