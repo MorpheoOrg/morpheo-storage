@@ -117,5 +117,5 @@ Examples can be found [here](https://github.com/MorpheoOrg/hypnogram-wf).
 Maintainers
 -----------
 
-* Étienne Lafarge <etienne@rythm.co>
-* Max-Pol Le Brun <maxpol_at_morpheo.co
+* Étienne Lafarge <etienne_at_rythm.co>
+* Max-Pol Le Brun <maxpol_at_morpheo.co>
