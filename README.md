@@ -1,25 +1,68 @@
 Morpheo: Storage API
 ====================
 
-The `storage` API for the
-[Morpheo](https://morpheoorg.github.io/morpheo/modules/introduction.html)
-platform.
-
-It receives problems and submission algorithms as `.tar.gz` files including a
-`Dockerfile` and **streams** them to disk or to another storage backend (such as
-Amazon S3). It also receives, stores and serves datasets that feed ML algorithms
-hosted on the Morpheo platform.
+The Storage API for the [Morpheo](https://morpheoorg.github.io/morpheo/modules/introduction.html)
+platform *receives*, *stores* and *serves*:
+ * **Problems** as `.tar.gz` files
+ * **Algorithms** as `.tar.gz` files
+ * **Models**
+ * **Datasets**
 
 Key features
 ------------
 
 * **RAM-friendly**: uses low-level Golang primitives to stream data directly
-  from the request body, to the response body as it comes. Nothing in stored in
+  from the request body, to the response body as it comes. Nothing is stored in
   RAM (if using disk storage, the cache memory will be used but that's not a
-  problem at all).
+  problem at all)
 * **Self contained**: Golang enables us to ship a statically linked binary (in a
   `FROM scratch` docker image for instance)
 * **Simple & Low Level**: written in Golang, simple, and intented to stay so :)
+
+API Specification
+----------------- 
+
+Replacing `object` by `problem`, `algo`, `model` or `data`, the API endpoints are: 
+
+| Method | URI endpoints       |     Action                             |
+|:------:| ------------------- | -------------------------------------- |
+|  `GET` | /                   | Lists all the routes                   |
+|  `GET` | /health             | Service liveness probe                 |
+|  `GET` | /:object            | List all the objects                   |
+| `POST` | /:object            | Post a new object                      |
+|  `GET` | /:object/:uuid      | Get an object by uuid                  |
+|  `GET` | /:object/:uuid/blob | Get an object blob by uuid             |
+
+
+Usage: Uploading or retrieving data
+-----------------------------------
+
+#### Upload a data, model or problem
+Blobs are sent directly in the request body for `/data`, `/model` and `/problem`.
+
+Examples with `curl`, assuming storage is running on `localhost:8081`:
+```shell
+curl --data-binary "@/path/to/data.hdf5" -u user:password http://localhost:8081/data
+```
+
+#### Upload an algo
+Uploading an algo is a bit different, as a multipart upload request is used to send metadata. The request body should be formatted according to the *multipart/form-data* content type [[RFC2388]](https://www.ietf.org/rfc/rfc2388.txt).
+
+The form fields are the following:
+ * `name`: name of the algo, should be a non-empty string
+ * `size`: size of the blob file in *bytes*
+ * `blob`: blob file. Must come **after name and size** in the request body, otherwise it returns an error 400
+
+Examples with `curl`:
+```shell
+curl -X POST -H "Content-Type: multipart/form-data" -u user:password -F name=funky_algo -F size=120 -F blob=@algo.tar.gz http://localhost:8081/algo
+```
+
+#### Retrieve a blob of data, algo, model or problem
+Examples with `curl` to retrieve a data:
+```shell
+curl -u user:password http://localhost:8081/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
+```
 
 CLI Arguments
 -------------
@@ -64,55 +107,6 @@ Usage of ./storage-api/target/storage-api:
   -s3-region string
       The AWS Bucket region for S3 Storage (default: empty string)
 ```
-
-API Specification
------------------
-
- * `GET /`: lists all the routes
- * `GET /health`: service liveness probe
-
- * `GET /problem`: problem list
- * `POST /problem`: post a problem
- * `GET /problem/:uuid`: get a problem object by id
- * `GET /problem/:uuid/blob`: get a problem data blob by id
-
- * `GET /algo`: algo list
- * `POST /algo`: post an algo
- * `GET /algo/:uuid`: get an algo object by id
- * `GET /algo/:uuid/blob`: get an algo data blob by id
-
- * `GET /data`: dataset list
- * `POST /data`: post a dataset
- * `GET /data/:uuid`: get a dataset object by id
- * `GET /data/:uuid/blob`: get a dataset data blob by id
-
-Uploading or retrieving data
-----------------------------
-
-The problem/algo/data blobs are read directly from the request body (for now,
-we're not even using multipart form uploads, it might be necessary at some point
-though).
-
-### Examples with `curl`
-
-* Posting a problem (assuming storage is running on `localhost:8080`):
-```shell
-curl --data-binary "@/path/to/problem.tar.gz" -u user:password http://localhost:8080/data
-```
-
-* Retrieving a piece of data (assuming storage is running on `localhost:8080`):
-```shell
-curl -u user:password http://localhost:8080/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
-```
-
-Container Specification
------------------------
-
-`/problem` and `/algo` routes expect a `.tar.gz` archive, containing a
-Dockerfile. Please refer to [the
-documentation](https://morpheoorg.github.io/morpheo/) for more information.
-
-Examples can be found [here](https://github.com/MorpheoOrg/hypnogram-wf).
 
 Maintainers
 -----------
