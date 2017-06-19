@@ -1,7 +1,7 @@
 Morpheo: Storage API
 ====================
 
-The Storage API for the [Morpheo](https://morpheoorg.github.io/morpheo/modules/introduction.html)
+The Storage API for the [Morpheo](https://morpheoorg.github.io/morpheo/index.html)
 platform *receives*, *stores* and *serves*:
  * **Problems** as `.tar.gz` files
  * **Algorithms** as `.tar.gz` files
