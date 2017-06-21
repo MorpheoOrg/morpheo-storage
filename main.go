@@ -553,18 +553,28 @@ func (s *APIServer) getModelList(c *iris.Context) {
 }
 
 func (s *APIServer) postModel(c *iris.Context) {
-	id, err := uuid.FromString(c.URLParam("algo"))
+	algoID, err := uuid.FromString(c.URLParam("algo"))
 	if err != nil {
-		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse algo UUID %s: %s", algoID, err)))
 		return
 	}
-	algo, err := s.getAlgoInstance(id)
+	algo, err := s.getAlgoInstance(algoID)
 	if err != nil {
 		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error uploading model: algorithm %s not found: %s", c.URLParam("algo"), err)))
 		return
 	}
 
-	model := common.NewModel(algo)
+	modelId := uuid.Nil
+	modelIDString := c.URLParam("uuid")
+	if len(modelIDString) > 0 {
+		modelId, err = uuid.FromString(modelIDString)
+		if err != nil {
+			c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse model UUID %s: %s", algoID, err)))
+			return
+		}
+	}
+
+	model := common.NewModel(modelId, algo)
 	statusCode, err := s.streamBlobToStorage("model", model.ID, c)
 	if err != nil {
 		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading model - %s", err)))
