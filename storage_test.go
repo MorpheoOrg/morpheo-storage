@@ -37,15 +37,16 @@ package main_test
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/MorpheoOrg/go-packages/common"
 	. "github.com/MorpheoOrg/storage"
 	"github.com/satori/go.uuid"
 	"gopkg.in/kataras/iris.v6"
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter"
 	"gopkg.in/kataras/iris.v6/httptest"
-	"os"
-	"strconv"
-	"testing"
 )
 
 var (
@@ -105,12 +106,12 @@ func TestGetListObject(t *testing.T) {
 }
 
 func TestGetObject(t *testing.T) {
-	e := httptest.New(app, t)
 
 	for _, url := range listObjectRoutes {
 		t.Logf(url)
 
 		// Test valid request returns Success
+		e := httptest.New(app, t)
 		e.GET(url+"/"+randomUUID).WithBasicAuth("u", "p").Expect().Status(200)
 
 		// Test invalid uuid returns BadRequest
@@ -177,13 +178,13 @@ func TestPostModel(t *testing.T) {
 	e := httptest.New(app, t)
 
 	// Test valid request returns StatusCreated
-	e.POST(ModelListRoute).WithQuery("algo", randomUUID).WithBasicAuth("u", "p").WithHeader("Content-Length", "666").WithBytes([]byte("fakefilecontent")).Expect().Status(201)
+	e.POST(ModelListRoute).WithQuery("algo", randomUUID).WithBasicAuth("u", "p").WithHeader("Content-Length", "15").WithBytes([]byte("fakefilecontent")).Expect().Status(201)
 
 	// Test request with unvalid algo uuid returns BadRequest
-	e.POST(ModelListRoute).WithQuery("algo", "7-Batman").WithBasicAuth("u", "p").WithHeader("Content-Length", "666").WithBytes([]byte("fakefilecontent")).Expect().Status(400)
+	e.POST(ModelListRoute).WithQuery("algo", "7-Batman").WithBasicAuth("u", "p").WithHeader("Content-Length", "15").WithBytes([]byte("fakefilecontent")).Expect().Status(400)
 
 	// Test request with unexistant algo uuid returns NotFound
-	e.POST(ModelListRoute).WithQuery("algo", DevilMockUUID).WithBasicAuth("u", "p").WithHeader("Content-Length", "666").WithBytes([]byte("fakefilecontent")).Expect().Status(404).Body().Match("(.*)Error uploading model: algorithm ([1-9-]*) not found(.*)")
+	e.POST(ModelListRoute).WithQuery("algo", DevilMockUUID).WithBasicAuth("u", "p").WithHeader("Content-Length", "15").WithBytes([]byte("fakefilecontent")).Expect().Status(404).Body().Match(`{\"error\":\"Error uploading model: algorithm (.+) not found: Error retrieving algo (.+): (.*)\"}`)
 
 	// Test failed file upload returns InternalServerError
 	e.POST(ModelListRoute).WithQuery("algo", randomUUID).WithBasicAuth("u", "p").WithHeader("Content-Length", strconv.Itoa(common.NaughtySize)).WithBytes([]byte("fakefilecontent")).Expect().Status(500).Body().Match("(.*)What a naughty size(.*)")
