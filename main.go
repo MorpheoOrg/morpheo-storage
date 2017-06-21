@@ -564,17 +564,17 @@ func (s *APIServer) postModel(c *iris.Context) {
 		return
 	}
 
-	modelId := uuid.Nil
+	modelID := uuid.Nil
 	modelIDString := c.URLParam("uuid")
 	if len(modelIDString) > 0 {
-		modelId, err = uuid.FromString(modelIDString)
+		modelID, err = uuid.FromString(modelIDString)
 		if err != nil {
-			c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse model UUID %s: %s", algoID, err)))
+			c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse model UUID %s: %s", modelID, err)))
 			return
 		}
 	}
 
-	model := common.NewModel(modelId, algo)
+	model := common.NewModel(modelID, algo)
 	statusCode, err := s.streamBlobToStorage("model", model.ID, c)
 	if err != nil {
 		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading model - %s", err)))
@@ -589,7 +589,7 @@ func (s *APIServer) postModel(c *iris.Context) {
 
 func (s *APIServer) getModelInstance(id uuid.UUID) (*common.Model, error) {
 	model := common.Model{}
-	err := s.AlgoModel.GetOne(&model, id)
+	err := s.ModelModel.GetOne(&model, id)
 	if err != nil {
 		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving model %s: %s", id, err))
 	}
