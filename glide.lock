@@ -1,8 +1,10 @@
 hash: 2670bb4cd55e9392c8b3371d2240e684130e9fa0c231a7ea81cf5029e1454473
-updated: 2017-06-07T00:54:14.398498344Z
+updated: 2017-06-21T02:27:43.428068085Z
 imports:
+- name: github.com/ajg/form
+  version: 523a5da1a92f01b01f840b61689c0340a0243532
 - name: github.com/aws/aws-sdk-go
-  version: 512bdaf8bec30abd545b440447cebb57b53d3af9
+  version: a9609d199df31ef4b1f347b007d63bb7c48e5619
   subpackages:
   - aws
   - aws/awserr
@@ -31,6 +33,10 @@ imports:
   - service/sts
 - name: github.com/BurntSushi/toml
   version: b26d9c308763d68093482582cea63d69be07a0f0
+- name: github.com/davecgh/go-spew
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  subpackages:
+  - spew
 - name: github.com/docker/distribution
   version: 1e2f10eb65743fed02f573d31a4587de09afb20e
   subpackages:
@@ -69,6 +75,10 @@ imports:
   version: 0dadbb0345b35ec7ef35e228dabb8de89a65bf52
 - name: github.com/docker/libtrust
   version: aabc10ec26b754e797f9028f4589c5b7bd90dc20
+- name: github.com/fatih/structs
+  version: 7e5a8eef611ee84dd359503f3969f80df4c50723
+- name: github.com/gavv/monotime
+  version: 47d58efa69556a936a3c15eb2ed42706d968ab01
 - name: github.com/geekypanda/httpcache
   version: 01f18a9beadcc489be4f89c92e82c02e251268cc
   subpackages:
@@ -84,7 +94,7 @@ imports:
 - name: github.com/go-ini/ini
   version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
 - name: github.com/golang/protobuf
-  version: 5a0f697c9ed9d68fef0116532c6e05cfeae00e55
+  version: 1fb8fd32a09087bcd727225167edd31e1b9ceb24
   subpackages:
   - proto
 - name: github.com/google/go-github
@@ -98,9 +108,13 @@ imports:
 - name: github.com/hashicorp/go-version
   version: 03c5bf6be031b6dd45afec16b1cf94fc8938bc77
 - name: github.com/imdario/mergo
-  version: d806ba8c21777d504a2090a2ca4913c750dd3a33
+  version: e3000cb3d28c72b837601cac94debd91032d19fe
+- name: github.com/imkira/go-interpol
+  version: 5accad8134979a6ac504d456a6c7f1c53da237ca
 - name: github.com/iris-contrib/formBinder
   version: 81b6a071e35797b83562caf4b3cad24dc01912dc
+- name: github.com/iris-contrib/httpexpect
+  version: b6aa3332b2c006510bd4f4978f1c28354a61bb4d
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/jmoiron/sqlx
@@ -126,9 +140,11 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: f533f7a102197536779ea3a8cb881d639e21ec5a
 - name: github.com/MorpheoOrg/go-packages
-  version: 334383ab37502c63405317a740f746416640d3dd
+  version: 8b1671affb9639872a57b6292b7ec7b2489a6649
   subpackages:
   - common
+- name: github.com/moul/http2curl
+  version: 4e24498b31dba4683efb9d35c1c8a91e2eda28c8
 - name: github.com/mreiferson/go-snappystream
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
@@ -136,43 +152,74 @@ imports:
 - name: github.com/nsqio/go-nsq
   version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
 - name: github.com/opencontainers/go-digest
-  version: eaa60544f31ccf3b0653b1a118b76d33418ff41b
+  version: 279bed98673dd5bef374d3b6e4b09e2af76183bf
 - name: github.com/pkg/errors
   version: c605e284fe17294bda444b34710735b29d1a9d90
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
 - name: github.com/rs/cors
-  version: bf64c5349c0f7e5e1554921e798e052958e0fe2f
+  version: 8dd4211afb5d08dbb39a533b9bb9e4b486351df6
 - name: github.com/rubenv/sql-migrate
-  version: 42c30aabf72921b83678a3d0680fd6cd46682f1b
+  version: 72a5478faa469f9023cc1802367cddfc5270acbb
   subpackages:
   - sqlparse
 - name: github.com/russross/blackfriday
-  version: 0ba0f2b6ed7c475a92e4df8641825cb7a11d1fa3
+  version: 067529f716f4c3f5e37c8c95ddd59df1007290ae
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/sergi/go-diff
+  version: 24e2351369ec4949b2ed0dc5c477afdd4c4034e8
+  repo: https://github.com/sergi/go-diff
+  subpackages:
+  - diffmatchpatch
 - name: github.com/Sirupsen/logrus
-  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
+  version: 3d4380f53a34dcdc95f0c1db702615992b38d9a4
+- name: github.com/stretchr/testify
+  version: f6abca593680b2315d2075e0f5e2a9751e3f431a
+  subpackages:
+  - assert
+  - require
 - name: github.com/valyala/bytebufferpool
   version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
 - name: github.com/valyala/fasthttp
-  version: b154429ca951971beae8427b1a918ebce58f64af
+  version: 6ac0fd1a910c94aefb171ae56941833831e7c7fe
   subpackages:
   - fasthttputil
   - stackless
+- name: github.com/xeipuuv/gojsonpointer
+  version: 6fe8760cad3569743d51ddbb243b26f8456742dc
+- name: github.com/xeipuuv/gojsonreference
+  version: e02fc20de94c78484cd5ffb007f8af96be030a45
+- name: github.com/xeipuuv/gojsonschema
+  version: 0c8571ac0ce161a5feb57375a9cdf148c98c0f70
+- name: github.com/yalp/jsonpath
+  version: 31a79c7593bb93eb10b163650d4a3e6ca190e4dc
+- name: github.com/yudai/gojsondiff
+  version: 9209d1532c51cabe0439993586a71c207b09a0ac
+  subpackages:
+  - formatter
+- name: github.com/yudai/golcs
+  version: d1c525dea8ce39ea9a783d33cf08932305373f2c
+  repo: https://github.com/yudai/golcs
 - name: golang.org/x/crypto
-  version: e7ba82683099cae71475961448ab8f903ea77c26
+  version: adbae1b6b6fb4b02448a0fc0dbbc9ba2b95b294d
   subpackages:
   - acme
   - acme/autocert
 - name: golang.org/x/net
-  version: 59a0b19b5533c7977ddeb86b017bf507ed407b12
+  version: fe686d45ea04bc1bd4eff6a52865ce8757320325
   subpackages:
   - context
   - context/ctxhttp
   - html
   - html/atom
   - proxy
+  - publicsuffix
 - name: golang.org/x/sys
-  version: b90f89a1e7a9c1f6b918820b3daa7f08488c8594
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  repo: https://go.googlesource.com/sys
   subpackages:
   - unix
   - windows
@@ -193,6 +240,7 @@ imports:
   subpackages:
   - adaptors/cors
   - adaptors/httprouter
+  - httptest
   - middleware/basicauth
   - middleware/logger
 - name: gopkg.in/yaml.v2
