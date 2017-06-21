@@ -48,7 +48,7 @@ const (
 	AlgoModelName    = "algo"
 	DataModelName    = "data"
 	ModelModelName   = "model"
-	DevilMockUUID    = "66666666-6666-6666-6666-666666666666"
+	DevilMockUUID    = "c54e361e-18db-48dd-aa71-96f28a1af892"
 )
 
 const (
