@@ -1,5 +1,5 @@
 hash: 2670bb4cd55e9392c8b3371d2240e684130e9fa0c231a7ea81cf5029e1454473
-updated: 2017-06-21T02:27:43.428068085Z
+updated: 2017-06-21T03:39:14.571938734Z
 imports:
 - name: github.com/ajg/form
   version: 523a5da1a92f01b01f840b61689c0340a0243532
@@ -140,7 +140,7 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: f533f7a102197536779ea3a8cb881d639e21ec5a
 - name: github.com/MorpheoOrg/go-packages
-  version: 8b1671affb9639872a57b6292b7ec7b2489a6649
+  version: 72b3832eeb6079de29e6267608a8e6038d0ac934
   subpackages:
   - common
 - name: github.com/moul/http2curl
