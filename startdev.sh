@@ -14,13 +14,13 @@ if [ "$BUILD" -ne "0" ]; then
     echo "	- go-packages branch: " $(cd ../go-packages; git branch | sed -n -e 's/^\* \(.*\)/\1/p')
 
     # remove old binary and compile new
-    rm build/target &> /dev/null
-    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o build/target .
+    rm api/build/target &> /dev/null
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api/build/target ./api
 fi
 
-if [ -e build/target ]; then
+if [ -e api/build/target ]; then
 	echo ""
 	echo "Build and run docker containers..."
-	# sudo chmod 777 -R data
+	sudo chmod 777 -R data
 	STORAGE_PORT=8081 STORAGE_AUTH_USER=u STORAGE_AUTH_PASSWORD=p docker-compose up --build
 fi

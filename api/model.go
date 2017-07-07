@@ -37,44 +37,45 @@ package main
 
 import (
 	"fmt"
-
+	"github.com/fatih/structs"
 	"github.com/jmoiron/sqlx"
 	uuid "github.com/satori/go.uuid"
+	"reflect"
 )
 
 // Model (and SQL table) names
 const (
-	ProblemModelName = "problem"
-	AlgoModelName    = "algo"
-	DataModelName    = "data"
-	ModelModelName   = "model"
-	DevilMockUUID    = "c54e361e-18db-48dd-aa71-96f28a1af892"
-)
-
-const (
-	// Migration table
-	migrationTable = "storage_migrations"
+	ProblemModelName   = "problem"
+	AlgoModelName      = "algo"
+	DataModelName      = "data"
+	ModelModelName     = "model"
+	migrationTable     = "storage_migrations"
+	DevilMockUUID      = "c54e361e-18db-48dd-aa71-96f28a1af892"
+	ProblemMockUUIDStr = "e42a31bb-a97b-47ff-81cf-ffdd7c5ddd08"
 )
 
 var (
 	// SQL statements
 	insertStatements = map[string]string{
-		"problem": `INSERT INTO problem (uuid, timestamp_upload, author) VALUES (:uuid, :timestamp_upload, :author)`,
-		"algo":    `INSERT INTO algo (uuid, timestamp_upload, name, author) VALUES (:uuid, :timestamp_upload, :name, :author)`,
-		"model":   `INSERT INTO model (uuid, algo, timestamp_upload, author) VALUES (:uuid, :algo, :timestamp_upload, :author)`,
+		"problem": `INSERT INTO problem (uuid, timestamp_upload, owner, name, description ) VALUES (:uuid, :timestamp_upload, :owner, :name, :description)`,
+		"algo":    `INSERT INTO algo (uuid, timestamp_upload, name, owner) VALUES (:uuid, :timestamp_upload, :name, :owner)`,
+		"model":   `INSERT INTO model (uuid, algo, timestamp_upload, owner) VALUES (:uuid, :algo, :timestamp_upload, :owner)`,
 		"data":    `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
 	}
 	selectTemplates = map[string]string{
-		"problem": "SELECT uuid, timestamp_upload, author FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"algo":    "SELECT uuid, timestamp_upload, name, author FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"model":   "SELECT uuid, algo, timestamp_upload, author FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"data":    "SELECT uuid, timestamp_upload, owner FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"problem": "SELECT * FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"algo":    "SELECT * FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"model":   "SELECT * FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"data":    "SELECT * FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 	}
 	getOneStatements = map[string]string{
-		"problem": `SELECT uuid, timestamp_upload, author FROM problem WHERE uuid=$1 LIMIT 1`,
-		"algo":    `SELECT uuid, timestamp_upload, name, author FROM algo WHERE uuid=$1 LIMIT 1`,
-		"model":   `SELECT uuid, algo, timestamp_upload, author FROM model WHERE uuid=$1 LIMIT 1`,
-		"data":    `SELECT uuid, timestamp_upload, owner FROM data WHERE uuid=$1 LIMIT 1`,
+		"problem": `SELECT * FROM problem WHERE uuid=$1 LIMIT 1`,
+		"algo":    `SELECT * FROM algo WHERE uuid=$1 LIMIT 1`,
+		"model":   `SELECT * FROM model WHERE uuid=$1 LIMIT 1`,
+		"data":    `SELECT * FROM data WHERE uuid=$1 LIMIT 1`,
+	}
+	updateStatements = map[string]string{
+		"problem": `UPDATE problem SET uuid=:ID, timestamp_upload=:TimestampUpload, owner=:Owner, name=:Name, description=:Description WHERE uuid=:prev_uuid`,
 	}
 
 	// Valid model names
@@ -91,6 +92,9 @@ type Model interface {
 	Insert(instance interface{}) error
 	List(instanceList interface{}, page, pageSize int) error
 	GetOne(instance interface{}, id uuid.UUID) error
+	Update(instance interface{}, id uuid.UUID) error
+	CheckUUIDNotUsed(id uuid.UUID) error
+	GetModelName() string
 }
 
 // SQLModel interacts with a postgreSQL database
@@ -144,6 +148,37 @@ func (m *SQLModel) GetOne(instance interface{}, id uuid.UUID) error {
 	return nil
 }
 
+// Update changes a model instance in base using its uuid
+func (m *SQLModel) Update(instance interface{}, id uuid.UUID) error {
+	instanceMap := structs.Map(instance)
+	instanceMap["prev_uuid"] = id
+	if updateStatements, ok := updateStatements[m.name]; ok {
+		if _, err := m.NamedExec(updateStatements, instanceMap); err != nil {
+			return fmt.Errorf("[model] Error updating %s from database: %s", m.name, err)
+		}
+	} else {
+		return fmt.Errorf("[model] No update statement found for model %s", m.name)
+	}
+	return nil
+}
+
+// CheckUUIDNotUsed checks if the UUID is alraedy used
+func (m *SQLModel) CheckUUIDNotUsed(id uuid.UUID) error {
+	rows, err := m.Queryx(fmt.Sprintf(`SELECT * FROM %s WHERE uuid='%s';`, m.name, id))
+	if err != nil {
+		return fmt.Errorf("[model] Error retrieving %s %s from database: %s", m.name, id, err)
+	}
+	if rows.Next() {
+		return fmt.Errorf("[model] UUID %s already exist in table '%s'", id, m.name)
+	}
+	return nil
+}
+
+// GetModelName returns the model name
+func (m *SQLModel) GetModelName() string {
+	return m.name
+}
+
 // MockedModel is a mock of SQLModel for tests
 type MockedModel struct {
 	name string
@@ -184,5 +219,40 @@ func (m *MockedModel) GetOne(instance interface{}, id uuid.UUID) error {
 	if id.String() == DevilMockUUID {
 		return fmt.Errorf("[model] Runnin' With the Devil! sql: no rows in result set")
 	}
+	if id.String() == ProblemMockUUIDStr {
+		ProblemMockUUID, _ := uuid.FromString(ProblemMockUUIDStr)
+
+		// Fill struct Problem using reflection. This could be improved...
+		u := reflect.New(reflect.TypeOf(ProblemMockUUID)).Elem().Interface()
+		u = ProblemMockUUID
+
+		i := reflect.ValueOf(instance).Elem()
+		i.FieldByName("ID").Set(reflect.ValueOf(u))
+		u = uuid.NewV4()
+		i.FieldByName("Owner").Set(reflect.ValueOf(u))
+
+		i.FieldByName("Name").SetString("testName")
+		i.FieldByName("Description").SetString("testDescription")
+
+		return nil
+	}
 	return nil
+}
+
+// Update updates a model instance in base using its uuid
+func (m *MockedModel) Update(instance interface{}, id uuid.UUID) error {
+	return nil
+}
+
+// CheckUUIDNotUsed checks if the UUID is alraedy used
+func (m *MockedModel) CheckUUIDNotUsed(id uuid.UUID) error {
+	if id.String() == ProblemMockUUIDStr {
+		return fmt.Errorf("[model] UUID %s already exist in table '%s'", id, m.name)
+	}
+	return nil
+}
+
+// GetModelName returns the model name
+func (m *MockedModel) GetModelName() string {
+	return m.name
 }
