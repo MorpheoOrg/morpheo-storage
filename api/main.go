@@ -36,14 +36,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io"
+
 	"log"
-	"mime"
-	"mime/multipart"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -77,11 +72,6 @@ const (
 	ModelBlobRoute   = "/model/:uuid/blob"
 )
 
-const (
-	strFieldMaxLength = 255 // in bytes
-	intFieldMaxLength = 20  // in bytes
-)
-
 // APIServer represents the API configurations
 type APIServer struct {
 	Conf         *StorageConfig
@@ -101,6 +91,7 @@ func (s *APIServer) ConfigureRoutes(app *iris.Framework, authentication iris.Han
 	// Problem
 	app.Get(ProblemListRoute, authentication, s.getProblemList)
 	app.Post(ProblemListRoute, authentication, s.postProblem)
+	app.Patch(ProblemRoute, authentication, s.patchProblem)
 	app.Get(ProblemRoute, authentication, s.getProblem)
 	app.Get(ProblemBlobRoute, authentication, s.getProblemBlob)
 
@@ -271,129 +262,6 @@ func (s *APIServer) getBlobKey(blobType string, blobID uuid.UUID) string {
 	return fmt.Sprintf("%s/%s", blobType, blobID)
 }
 
-func readMultipartField(formName string, part io.ReadCloser, fieldType string) (string, error) {
-	defer part.Close()
-	var maxLength int64
-	if fieldType == "int" {
-		maxLength = intFieldMaxLength
-	} else {
-		maxLength = strFieldMaxLength
-	}
-	buf := make([]byte, maxLength)
-	offset := 0
-	for {
-		n, err := part.Read(buf[offset:])
-		if err != nil && err != io.EOF {
-			return "", fmt.Errorf("Error reading %s %s: %s", formName, fieldType, err)
-		}
-		offset += n
-
-		if err == io.EOF || offset == len(buf) {
-			break
-		}
-	}
-
-	// Buffer overflow test
-	rest := make([]byte, 10)
-	n, err := part.Read(rest)
-	if err != io.EOF || n > 0 {
-		return "", fmt.Errorf("Buffer overflow reading %s %s (max length is %d in base 10): %s", formName, fieldType, maxLength, err)
-	}
-	return string(buf[:offset]), nil
-}
-
-func (s *APIServer) streamBlobToStorage(blobType string, id uuid.UUID, c *iris.Context) (int, error) {
-	size, err := strconv.ParseInt(c.Request.Header.Get("Content-Length"), 10, 64)
-	if err != nil {
-		return 400, fmt.Errorf("Error parsing header 'Content-Length': should be blob size in bytes. err: %s", err)
-	}
-	err = s.BlobStore.Put(s.getBlobKey(blobType, id), c.Request.Body, size)
-	defer c.Request.Body.Close()
-	if err != nil {
-		return 500, err
-	}
-	return 201, nil
-}
-
-func (s *APIServer) streamBlobMultipartToStorage(blobType string, id uuid.UUID, mff *common.MultipartFormFields, c *iris.Context) (int, error) {
-	mediaType, params, err := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
-	if err != nil {
-		return 400, fmt.Errorf("Error parsing header \"Content-Type\": %s", err)
-	}
-
-	if !strings.HasPrefix(mediaType, "multipart/") {
-		return 400, fmt.Errorf("Invalid media type: %s. Should be: multipart/form-data", mediaType)
-	}
-
-	reader := multipart.NewReader(c.Request.Body, params["boundary"])
-	defer c.Request.Body.Close()
-
-	for {
-		part, err := reader.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return 400, fmt.Errorf("Error parsing multipart data: %s", err)
-		}
-
-		switch formName := part.FormName(); formName {
-		case "description":
-			mff.Description, err = readMultipartField(formName, part, "string")
-			if err != nil {
-				return 400, fmt.Errorf("Error reading description: %s", err)
-			}
-		case "name":
-			mff.Name, err = readMultipartField(formName, part, "string")
-			if err != nil {
-				return 400, fmt.Errorf("Error reading Name: %s", err)
-			}
-		case "size":
-			sizeStr, err := readMultipartField(formName, part, "int")
-			if err != nil {
-				return 400, fmt.Errorf("Error reading size field: %s", err)
-			}
-			mff.Size, err = strconv.ParseInt(sizeStr, 10, 64)
-			if err != nil {
-				return 400, fmt.Errorf("Error parsing size field to integer: %s", err)
-			}
-		default:
-			defer part.Close()
-			if formName == "blob" {
-				err := common.CheckFormFields(blobType, mff)
-				if err != nil {
-					return 400, fmt.Errorf("%s", err)
-				}
-				err = s.BlobStore.Put(s.getBlobKey(blobType, id), part, mff.Size)
-				if err != nil {
-					return 500, fmt.Errorf("Error writing blob content to storage: %s", err)
-				}
-				return 200, nil
-			}
-
-			return 400, fmt.Errorf("Unknown field \"%s\"", part.FormName())
-		}
-	}
-	return 400, errors.New("Premature EOF while parsing request")
-}
-
-func (s *APIServer) streamBlobFromStorage(blobType string, blobID uuid.UUID, c *iris.Context) {
-	blobReader, err := s.BlobStore.Get(s.getBlobKey(blobType, blobID))
-	if err != nil {
-		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving %s %s: %s", blobType, blobID, err)))
-		return
-	}
-	defer blobReader.Close()
-	c.StreamWriter(func(w io.Writer) bool {
-		_, err := io.Copy(w, blobReader)
-		if err != nil {
-			c.JSON(500, common.NewAPIError(fmt.Sprintf("Error reading %s %s: %s", blobType, blobID, err)))
-			return false
-		}
-		return false
-	})
-}
-
 // Problem related routes
 func (s *APIServer) getProblemList(c *iris.Context) {
 	problems := make([]common.Problem, 0, 30)
@@ -412,9 +280,9 @@ func (s *APIServer) getProblemList(c *iris.Context) {
 
 func (s *APIServer) postProblem(c *iris.Context) {
 	problem := common.NewProblem()
-	statusCode, err := s.streamBlobToStorage("problem", problem.ID, c)
+	statusCode, err := s.streamMultipartToStorage(s.ProblemModel, problem, c)
 	if err != nil {
-		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading problem - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error uploading problem] %s", err)))
 		return
 	}
 	err = s.ProblemModel.Insert(problem)
@@ -422,6 +290,33 @@ func (s *APIServer) postProblem(c *iris.Context) {
 		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting problem %s in database: %s", problem.ID, err)))
 	}
 	c.JSON(201, problem)
+}
+
+func (s *APIServer) patchProblem(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
+	if err != nil {
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+	problem, err := s.getProblemInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving problem %s: %s", c.Param("uuid"), err)))
+		return
+	}
+	statusCode, err := s.streamMultipartToStorage(s.ProblemModel, problem, c)
+	if err != nil {
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error patching problem] %s", err)))
+		return
+	}
+	if statusCode == 201 && problem.ID != id { // delete old blob if uuid and blob has changed
+		err = s.BlobStore.Delete(s.getBlobKey(s.ProblemModel.GetModelName(), id))
+	}
+	err = s.ProblemModel.Update(problem, id)
+	if err != nil {
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error updating problem %s in database: %s", problem.ID, err)))
+		return
+	}
+	c.JSON(200, problem)
 }
 
 func (s *APIServer) getProblemInstance(id uuid.UUID) (*common.Problem, error) {
@@ -482,13 +377,11 @@ func (s *APIServer) getAlgoList(c *iris.Context) {
 
 func (s *APIServer) postAlgo(c *iris.Context) {
 	algo := common.NewAlgo()
-	mff := common.MultipartFormFields{}
-	statusCode, err := s.streamBlobMultipartToStorage("algo", algo.ID, &mff, c)
+	statusCode, err := s.streamMultipartToStorage(s.AlgoModel, algo, c)
 	if err != nil {
-		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading algo - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error uploading algo] %s", err)))
 		return
 	}
-	algo.Name = mff.Name
 	err = s.AlgoModel.Insert(algo)
 	if err != nil {
 		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting algo %s in database: %s", algo.ID, err)))
@@ -577,7 +470,7 @@ func (s *APIServer) postModel(c *iris.Context) {
 	model := common.NewModel(modelID, algo)
 	statusCode, err := s.streamBlobToStorage("model", model.ID, c)
 	if err != nil {
-		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading model - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error uploading model] %s", err)))
 		return
 	}
 	err = s.ModelModel.Insert(model)
@@ -645,9 +538,9 @@ func (s *APIServer) getDataList(c *iris.Context) {
 
 func (s *APIServer) postData(c *iris.Context) {
 	data := common.NewData()
-	statusCode, err := s.streamBlobToStorage("data", data.ID, c)
+	statusCode, err := s.streamMultipartToStorage(s.DataModel, data, c)
 	if err != nil {
-		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("Error uploading data - %s", err)))
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error uploading data] %s", err)))
 		return
 	}
 	err = s.DataModel.Insert(data)
@@ -707,6 +600,7 @@ func SetBlobStore(dataDir string, awsBucket string, awsRegion string) (common.Bl
 	case awsBucket == "fake" && awsRegion == "fake":
 		return common.NewFakeBlobStore(dataDir)
 	default:
+		log.Println("[S3BlobStore] Data is stored on Amazon S3")
 		return common.NewS3BlobStore(awsBucket, awsRegion)
 	}
 }

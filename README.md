@@ -19,49 +19,93 @@ Key features
   `FROM scratch` docker image for instance)
 * **Simple & Low Level**: written in Golang, simple, and intented to stay so :)
 
-API Specification
------------------ 
+API Endpoints
+-------------
+The GET requests are pretty simple:
 
-Replacing `object` by `problem`, `algo`, `model` or `data`, the API endpoints are: 
+**GET /** - List all the routes
 
-| Method | URI endpoints       |     Action                             |
-|:------:| ------------------- | -------------------------------------- |
-|  `GET` | /                   | Lists all the routes                   |
-|  `GET` | /health             | Service liveness probe                 |
-|  `GET` | /:object            | List all the objects                   |
-| `POST` | /:object            | Post a new object                      |
-|  `GET` | /:object/:uuid      | Get an object by uuid                  |
-|  `GET` | /:object/:uuid/blob | Get an object blob by uuid             |
+**GET /health** - Service liveness probe
+
+**GET /:resource** - List all the resources (replacing `:resource` by `problem`, `algo`, `model` or `data`)
+
+**GET /:resource/:uuid** - Get a resource by uuid
+
+**GET /:resource/:uuid/:blob** - Get a resource blob by uuid
+
+
+
+<br>
+
+For the POST Requests, a multipart form is used to send metadata. The last form field should be the BLOB data, because it is streamed directly from the request body. The content should be formatted according to the *multipart/form-data* content type [[RFC2388]](https://www.ietf.org/rfc/rfc2388.txt). You can find below the endpoints with the corresponding form fields: 
+
+
+**POST /problem** - Add a new problem
+
+* `uuid` (optional): uuid of the problem 
+* `name`: name of the problem
+* `description`: description of the problem
+* `owner` (optional): uuid of the owner
+* `size`: size of the blob file
+* `blob`: blob file (must be the last form field)
+
+<br>
+
+**POST /algo** - Add a new problem
+
+* `uuid` (optional): uuid of the algo 
+* `name`: name of the algo
+* `owner` (optional): uuid of the owner
+* `size`: size of the blob file
+* `blob`: blob file (must be the last form field)
+
+<br>
+
+**POST /model?:uuid** - Add a new model
+
+A model is linked to an algo by its `:uuid`. Blobs are sent directly in the request body for `/model` (TO BE CHANGED).
+
+<br>
+
+**POST /data** - Add a new problem
+
+* `uuid` (optional): uuid of the data 
+* `owner` (optional): uuid of the owner
+* `size`: size of the blob file
+* `blob`: blob file (must be the last form field)
+
+<br>
+
+**PATCH /problem** - Patch a new problem
+
+All the following fields are optional:
+* `uuid`: uuid of the problem 
+* `name`: name of the problem
+* `description`: description of the problem
+* `owner`: uuid of the owner
+* `size`: size of the blob file
+* `blob`: blob file (must be the last form field)
 
 
 Usage: Uploading or retrieving data
 -----------------------------------
 
-#### Upload a data, model or problem
-Blobs are sent directly in the request body for `/data`, `/model` and `/problem`.
-
-Examples with `curl`, assuming storage is running on `localhost:8081`:
+#### Upload a problem, algo or data
+Examples for a problem with `curl`, assuming storage is running on `localhost:8081`:
 ```shell
-curl --data-binary "@/path/to/data.hdf5" -u user:password http://localhost:8081/data
+curl -X POST -u user:pass -F uuid=$(uuidgen) -F name=funky_problem -F description=great -F size=666 -F blob=@problem.tar.gz http://localhost:8081/problem
 ```
 
-#### Upload an algo
-Uploading an algo is a bit different, as a multipart upload request is used to send metadata. The request body should be formatted according to the *multipart/form-data* content type [[RFC2388]](https://www.ietf.org/rfc/rfc2388.txt).
-
-The form fields are the following:
- * `name`: name of the algo, should be a non-empty string
- * `size`: size of the blob file in *bytes*
- * `blob`: blob file. Must come **after name and size** in the request body, otherwise it returns an error 400
-
+#### Upload a model
 Examples with `curl`:
 ```shell
-curl -X POST -H "Content-Type: multipart/form-data" -u user:password -F name=funky_algo -F size=120 -F blob=@algo.tar.gz http://localhost:8081/algo
+curl --data-binary "@/path/to/model" -u user:password http://localhost:8081/model
 ```
 
 #### Retrieve a blob of data, algo, model or problem
 Examples with `curl` to retrieve a data:
 ```shell
-curl -u user:password http://localhost:8081/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
+curl -u user:pass http://localhost:8081/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
 ```
 
 CLI Arguments
