@@ -3,18 +3,21 @@ version: '2'
 services:
   # Storage
   storage:
-    build: ./
+    build: ./api
     image: storage
     container_name: storage
     restart: unless-stopped
-    command: -host 0.0.0.0 -port 80 -user ${STORAGE_AUTH_USER} -password ${STORAGE_AUTH_PASSWORD}
+    command: -host 0.0.0.0 -port 80 -user ${STORAGE_AUTH_USER} -password ${STORAGE_AUTH_PASSWORD} # -s3-bucket ${AWS_BUCKET} -s3-region ${AWS_REGION}
     ## Stops the container from taking up all the cache memory on big file
     ## uploads
     mem_limit: 100000000
     memswap_limit: 100000000
     volumes:
     - ./data/storage:/data
-    # - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    environment:
+    - AWS_ACCESS_KEY_ID=${STORAGE_AWS_ACCESS_KEY_ID}
+    - AWS_SECRET_ACCESS_KEY=${STORAGE_AWS_SECRET_ACCESS_KEY}
     ports:
     - "${STORAGE_PORT}:80/tcp"
     networks:
