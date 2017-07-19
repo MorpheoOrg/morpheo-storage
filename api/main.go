@@ -289,7 +289,7 @@ func (s *APIServer) postProblem(c *iris.Context) {
 	if err != nil {
 		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting problem %s in database: %s", problem.ID, err)))
 	}
-	c.JSON(201, problem)
+	c.JSON(201, problem.Truncate())
 }
 
 func (s *APIServer) patchProblem(c *iris.Context) {

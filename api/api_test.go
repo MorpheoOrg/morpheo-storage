@@ -39,6 +39,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"strconv"
 	"testing"
 
@@ -58,10 +59,10 @@ var (
 		AlgoListRoute, AlgoRoute, AlgoBlobRoute,
 		ModelListRoute, ModelRoute, ModelBlobRoute,
 	}
-	listObjectRoutes          = []string{DataListRoute, ProblemListRoute, AlgoListRoute, ModelListRoute}
-	postObjectMultipartRoutes = []string{ProblemListRoute, AlgoListRoute, DataListRoute}
+	listObjectRoutes = []string{DataListRoute, ProblemListRoute, AlgoListRoute, ModelListRoute}
 
 	RandomUUID           uuid.UUID
+	READMEPath           string
 	MultipartFormMap     map[string]map[string]string
 	MultipartFormUUIDMap map[string]map[string]string
 )
@@ -74,6 +75,10 @@ func TestMain(m *testing.M) {
 	RandomUUID = uuid.NewV4()
 	MultipartFormMap, MultipartFormUUIDMap = NewMultipartFormMap(RandomUUID)
 
+	// Get Readme.md path for description form field
+	wd, _ := os.Getwd()
+	pd, _ := path.Split(wd)
+	READMEPath = path.Join(pd, "README.md")
 	os.Exit(m.Run())
 }
 
@@ -148,42 +153,67 @@ func TestGetObjectBlob(t *testing.T) {
 func TestPostObjectMultipart(t *testing.T) {
 	e := httptest.New(app, t)
 
-	for _, url := range postObjectMultipartRoutes {
+	for _, url := range []string{ProblemListRoute} {
 		t.Logf(url)
 
 		// Test valid request with UUID returns Success
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("size", "666").WithFile("blob", "README.md").Expect().Status(201).Body().Match("(.*)" + RandomUUID.String() + "(.*)")
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("description", READMEPath).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(201).Body().Match("(.*)" + RandomUUID.String() + "(.*)")
 
 		// Test valid request without UUID returns Success
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormMap[url]).WithFormField("size", "666").WithFile("blob", "README.md").Expect().Status(201)
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormMap[url]).WithFile("description", READMEPath).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(201)
+
+		// Test size omission returns BadRequest
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("description", READMEPath).WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)'Size' unset(.*)")
+
+		// Test failed file upload returns InternalServerError
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("description", READMEPath).WithFormField("size", common.NaughtySize).WithFile("blob", "config.go").Expect().Status(500)
+
+		// Test invalid description returns BadRequest
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("description", "main.go").WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)description should be a '.md' file(.*)")
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)'Description' unset(.*)")
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("description", "great description").WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)description should be a '.md' file(.*)")
+	}
+
+	for _, url := range []string{AlgoListRoute, DataListRoute} {
+		t.Logf(url)
+
+		// Test valid request with UUID returns Success
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(201).Body().Match("(.*)" + RandomUUID.String() + "(.*)")
+
+		// Test valid request without UUID returns Success
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormMap[url]).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(201)
+
+		// Test size omission returns BadRequest
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)'Size' unset(.*)")
+
+		// Test failed file upload returns InternalServerError
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("size", common.NaughtySize).WithFile("blob", "config.go").Expect().Status(500)
+	}
+
+	for _, url := range []string{AlgoListRoute, DataListRoute, ProblemListRoute} {
+		t.Logf(url)
 
 		// Test request with invalid Content-Type header returns BadRequest
-		e.POST(url).WithBasicAuth("u", "p").Expect().Status(400)
-		e.POST(url).WithBasicAuth("u", "p").WithHeader("Content-Type", "invalid").Expect().Status(400)
+		e.POST(url).WithBasicAuth("u", "p").Expect().Status(400).Body().Match("(.*)Error parsing header(.*)")
+		e.POST(url).WithBasicAuth("u", "p").WithHeader("Content-Type", "invalid").Expect().Status(400).Body().Match("(.*)Invalid media type(.*)")
 
 		// Test invalid form fields returns BadRequest
 		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFormField("invalid", "aze").Expect().Status(400).Body().Match("(.*)Unknown field(.*)")
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFormField("uuid", "invalid").WithFile("blob", "README.md").Expect().Status(400).Body().Match("(.*)Error parsing UUID uuid(.*)")
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFormField("uuid", "invalid").WithFile("blob", "config.go").Expect().Status(400).Body().Match("(.*)Error parsing UUID uuid(.*)")
 		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFormField("size", "invalid").Expect().Status(400).Body().Match("(.*)Error parsing size(.*)")
 
-		// Test size omission returns BadRequest
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFile("blob", "README.md").Expect().Status(400).Body().Match("(.*)'Size' unset(.*)")
-
 		// Test field blob not at the end returns BadRequest
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFile("blob", "README.md").WithForm(MultipartFormUUIDMap[url]).WithFormField("size", "666").Expect().Status(400)
-
-		// Test failed file upload returns InternalServerError
-		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[url]).WithFormField("size", common.NaughtySize).WithFile("blob", "README.md").Expect().Status(500)
+		e.POST(url).WithBasicAuth("u", "p").WithMultipart().WithFile("blob", "config.go").WithForm(MultipartFormUUIDMap[url]).WithFormField("size", "666").Expect().Status(400)
 	}
 
 	// Test valid form field but not suited for Object returns BadRequest
-	e.POST(DataListRoute).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[ProblemListRoute]).WithFormField("size", "666").WithFile("blob", "README.md").Expect().Status(400)
+	e.POST(DataListRoute).WithBasicAuth("u", "p").WithMultipart().WithForm(MultipartFormUUIDMap[ProblemListRoute]).WithFormField("size", "666").WithFile("blob", "config.go").Expect().Status(400)
 
-	// Test big description/size returns BadRequest
+	// Test big name/size returns BadRequest
 	buf := make([]byte, StrFieldMaxLength+1)
 	rand.Read(buf)
-	e.POST(postObjectMultipartRoutes[0]).WithBasicAuth("u", "p").WithMultipart().WithFormField("size", buf).Expect().Status(400).Body().Match("(.*)Buffer overflow reading size(.*)")
-	e.POST(postObjectMultipartRoutes[0]).WithBasicAuth("u", "p").WithMultipart().WithFormField("description", buf).Expect().Status(400).Body().Match("(.*)Buffer overflow reading description(.*)")
+	e.POST(AlgoListRoute).WithBasicAuth("u", "p").WithMultipart().WithFormField("size", buf).Expect().Status(400).Body().Match("(.*)Buffer overflow reading size(.*)")
+	e.POST(ProblemListRoute).WithBasicAuth("u", "p").WithMultipart().WithFormField("name", buf).Expect().Status(400).Body().Match("(.*)Buffer overflow reading name(.*)")
 }
 
 func TestPostModel(t *testing.T) {
@@ -206,12 +236,12 @@ func TestPatchProblem(t *testing.T) {
 	e := httptest.New(app, t)
 
 	// Test valid patch returns Success
-	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("description", "new Great Description").WithFormField("uuid", uuid.NewV4()).Expect().Status(200).Body().Match("(.*)new Great Description(.*)")
+	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFile("description", READMEPath).WithFormField("uuid", uuid.NewV4()).Expect().Status(200)
 
 	// Test used UUID returns Conflict
 	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("uuid", ProblemMockUUIDStr).Expect().Status(409)
 
-	// 	Test valid name returns BadRequest
+	// 	Test invalid name returns BadRequest
 	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("name", "").Expect().Status(400).Body().Match("(.*)'Name' unset(.*)")
 }
 
@@ -247,9 +277,8 @@ func setTestApp() *iris.Framework {
 func NewMultipartFormMap(id uuid.UUID) (m map[string]map[string]string, mUUID map[string]map[string]string) {
 	m = map[string]map[string]string{
 		ProblemListRoute: map[string]string{
-			"name":        "testName",
-			"description": "testDescription",
-			"owner":       uuid.NewV4().String(),
+			"name":  "testName",
+			"owner": uuid.NewV4().String(),
 		},
 		AlgoListRoute: map[string]string{
 			"name":  "testName",

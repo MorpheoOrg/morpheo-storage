@@ -63,7 +63,7 @@ var (
 		"data":    `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
 	}
 	selectTemplates = map[string]string{
-		"problem": "SELECT * FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"problem": "SELECT uuid, timestamp_upload, name, description::varchar(30)||'...' as description, owner FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 		"algo":    "SELECT * FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 		"model":   "SELECT * FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 		"data":    "SELECT * FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",

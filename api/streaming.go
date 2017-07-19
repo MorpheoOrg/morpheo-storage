@@ -25,7 +25,9 @@ var PostMultipartFields = map[string][]string{
 const (
 	// StrFieldMaxLength is the max length for the multipart fields
 	StrFieldMaxLength = 255 // in bytes
-	intFieldMaxLength = 20  // in bytes
+	// DescriptionMaxLength is the max length for the problem description
+	DescriptionMaxLength = 10000 // in bytes
+	intFieldMaxLength    = 20    // in bytes
 )
 
 func readMultipartField(formName string, part io.ReadCloser, maxLength int) (string, error) {
@@ -105,7 +107,11 @@ func (s *APIServer) streamMultipartToStorage(ResourceModel Model, resource commo
 			}
 			formFields["uuid"] = id
 		case "description":
-			formFields["description"], err = readMultipartField(formName, part, StrFieldMaxLength)
+			filename := part.FileName()
+			if len(filename) < 3 || strings.ToLower(filename[len(filename)-3:]) != ".md" {
+				return 400, fmt.Errorf("Invalid form: description should be a '.md' file")
+			}
+			formFields["description"], err = readMultipartField(formName, part, DescriptionMaxLength)
 			if err != nil {
 				return 400, fmt.Errorf("Error reading description: %s", err)
 			}
@@ -154,7 +160,7 @@ func (s *APIServer) streamMultipartToStorage(ResourceModel Model, resource commo
 			return 400, fmt.Errorf("Unknown field \"%s\"", part.FormName())
 		}
 	}
-	// If method is patch, fill resource and return 200 if patch is valid
+	// If method is a valid PATCH request, fill Resource and return 200
 	if c.Method() == "PATCH" {
 		if err := resource.FillResource(formFields); err != nil {
 			return 400, fmt.Errorf("Invalid form: %s. Make sure that each form field is sent before blob in the multipart/form", err)
@@ -174,7 +180,7 @@ func (s *APIServer) streamMultipartToStorage(ResourceModel Model, resource commo
 		}
 		return 200, nil
 	}
-	return 400, errors.New("Premature EOF while parsing request")
+	return 400, errors.New("Premature EOF while parsing request: 'blob' field may be missing")
 }
 
 func (s *APIServer) streamBlobFromStorage(blobType string, blobID uuid.UUID, c *iris.Context) {
