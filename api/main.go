@@ -56,30 +56,34 @@ import (
 
 // Available HTTP routes
 const (
-	RootRoute        = "/"
-	HealthRoute      = "/health"
-	ProblemListRoute = "/problem"
-	ProblemRoute     = "/problem/:uuid"
-	ProblemBlobRoute = "/problem/:uuid/blob"
-	DataListRoute    = "/data"
-	DataRoute        = "/data/:uuid"
-	DataBlobRoute    = "/data/:uuid/blob"
-	AlgoListRoute    = "/algo"
-	AlgoRoute        = "/algo/:uuid"
-	AlgoBlobRoute    = "/algo/:uuid/blob"
-	ModelListRoute   = "/model"
-	ModelRoute       = "/model/:uuid"
-	ModelBlobRoute   = "/model/:uuid/blob"
+	RootRoute           = "/"
+	HealthRoute         = "/health"
+	ProblemListRoute    = "/problem"
+	ProblemRoute        = "/problem/:uuid"
+	ProblemBlobRoute    = "/problem/:uuid/blob"
+	DataListRoute       = "/data"
+	DataRoute           = "/data/:uuid"
+	DataBlobRoute       = "/data/:uuid/blob"
+	AlgoListRoute       = "/algo"
+	AlgoRoute           = "/algo/:uuid"
+	AlgoBlobRoute       = "/algo/:uuid/blob"
+	ModelListRoute      = "/model"
+	ModelRoute          = "/model/:uuid"
+	ModelBlobRoute      = "/model/:uuid/blob"
+	PredictionListRoute = "/prediction"
+	PredictionRoute     = "/prediction/:uuid"
+	PredictionBlobRoute = "/prediction/:uuid/blob"
 )
 
 // APIServer represents the API configurations
 type APIServer struct {
-	Conf         *StorageConfig
-	BlobStore    common.BlobStore
-	ProblemModel Model
-	AlgoModel    Model
-	ModelModel   Model
-	DataModel    Model
+	Conf            *StorageConfig
+	BlobStore       common.BlobStore
+	ProblemModel    Model
+	AlgoModel       Model
+	ModelModel      Model
+	DataModel       Model
+	PredictionModel Model
 }
 
 // ConfigureRoutes links the urls with the func and set authentication
@@ -112,6 +116,12 @@ func (s *APIServer) ConfigureRoutes(app *iris.Framework, authentication iris.Han
 	app.Post(DataListRoute, authentication, s.postData)
 	app.Get(DataRoute, authentication, s.getData)
 	app.Get(DataBlobRoute, authentication, s.getDataBlob)
+
+	// Prediction
+	app.Get(PredictionListRoute, authentication, s.getPredictionList)
+	app.Post(PredictionListRoute, authentication, s.postPrediction)
+	app.Get(PredictionRoute, authentication, s.getPrediction)
+	app.Get(PredictionBlobRoute, authentication, s.getPredictionBlob)
 }
 
 // RunMigrations applies migrations in migrationDir
@@ -208,6 +218,11 @@ func main() {
 		log.Fatalf("Cannot create model %s: %s", DataModelName, err)
 	}
 
+	predictionModel, err := NewSQLModel(db, PredictionModelName)
+	if err != nil {
+		log.Fatalf("Cannot create model %s: %s", PredictionModelName, err)
+	}
+
 	// Set BlobStore
 	blobStore, err := SetBlobStore(conf.DataDir, conf.AWSBucket, conf.AWSRegion)
 	if err != nil {
@@ -215,12 +230,13 @@ func main() {
 	}
 
 	api := &APIServer{
-		Conf:         conf,
-		BlobStore:    blobStore,
-		ProblemModel: problemModel,
-		AlgoModel:    algoModel,
-		ModelModel:   modelModel,
-		DataModel:    dataModel,
+		Conf:            conf,
+		BlobStore:       blobStore,
+		ProblemModel:    problemModel,
+		AlgoModel:       algoModel,
+		ModelModel:      modelModel,
+		DataModel:       dataModel,
+		PredictionModel: predictionModel,
 	}
 	api.ConfigureRoutes(app, authentication)
 
@@ -249,6 +265,8 @@ func (s *APIServer) index(c *iris.Context) {
 		ModelListRoute,
 		ModelRoute,
 		ModelBlobRoute,
+		PredictionRoute,
+		PredictionBlobRoute,
 	})
 }
 
@@ -589,6 +607,76 @@ func (s *APIServer) getDataBlob(c *iris.Context) {
 	}
 
 	s.streamBlobFromStorage("data", id, c)
+}
+
+// Prediction related routes
+func (s *APIServer) getPredictionList(c *iris.Context) {
+	predictions := make([]common.Prediction, 0, 30)
+	err := s.PredictionModel.List(&predictions, 0, 30)
+	if err != nil {
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error retrieving prediction list: %s", err)))
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"page":   0,
+		"length": len(predictions),
+		"items":  predictions,
+	})
+}
+
+func (s *APIServer) postPrediction(c *iris.Context) {
+	prediction := common.NewPrediction()
+	statusCode, err := s.streamMultipartToStorage(s.PredictionModel, prediction, c)
+	if err != nil {
+		c.JSON(statusCode, common.NewAPIError(fmt.Sprintf("[Error uploading prediction] %s", err)))
+		return
+	}
+	err = s.PredictionModel.Insert(prediction)
+	if err != nil {
+		c.JSON(500, common.NewAPIError(fmt.Sprintf("Error inserting prediction %s in database: %s", prediction.ID, err)))
+	}
+	c.JSON(201, prediction)
+}
+
+func (s *APIServer) getPredictionInstance(id uuid.UUID) (*common.Prediction, error) {
+	prediction := common.Prediction{}
+	err := s.PredictionModel.GetOne(&prediction, id)
+	if err != nil {
+		return nil, common.NewAPIError(fmt.Sprintf("Error retrieving prediction %s: %s", id, err))
+	}
+	return &prediction, nil
+}
+
+func (s *APIServer) getPrediction(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
+	if err != nil {
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+
+	prediction, err := s.getPredictionInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving prediction %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	c.JSON(200, prediction)
+}
+
+func (s *APIServer) getPredictionBlob(c *iris.Context) {
+	id, err := uuid.FromString(c.Param("uuid"))
+	if err != nil {
+		c.JSON(400, common.NewAPIError(fmt.Sprintf("Impossible to parse UUID %s: %s", id, err)))
+		return
+	}
+	_, err = s.getPredictionInstance(id)
+	if err != nil {
+		c.JSON(404, common.NewAPIError(fmt.Sprintf("Error retrieving prediction %s: %s", c.Param("uuid"), err)))
+		return
+	}
+
+	s.streamBlobFromStorage("prediction", id, c)
 }
 
 // SetBlobStore defines the blobstore type (local, fake, S3)

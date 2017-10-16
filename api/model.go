@@ -45,34 +45,38 @@ import (
 
 // Model (and SQL table) names
 const (
-	ProblemModelName   = "problem"
-	AlgoModelName      = "algo"
-	DataModelName      = "data"
-	ModelModelName     = "model"
-	migrationTable     = "storage_migrations"
-	DevilMockUUID      = "c54e361e-18db-48dd-aa71-96f28a1af892"
-	ProblemMockUUIDStr = "e42a31bb-a97b-47ff-81cf-ffdd7c5ddd08"
+	ProblemModelName    = "problem"
+	AlgoModelName       = "algo"
+	DataModelName       = "data"
+	ModelModelName      = "model"
+	PredictionModelName = "prediction"
+	migrationTable      = "storage_migrations"
+	DevilMockUUID       = "c54e361e-18db-48dd-aa71-96f28a1af892"
+	ProblemMockUUIDStr  = "e42a31bb-a97b-47ff-81cf-ffdd7c5ddd08"
 )
 
 var (
 	// SQL statements
 	insertStatements = map[string]string{
-		"problem": `INSERT INTO problem (uuid, timestamp_upload, owner, name, description ) VALUES (:uuid, :timestamp_upload, :owner, :name, :description)`,
-		"algo":    `INSERT INTO algo (uuid, timestamp_upload, name, owner) VALUES (:uuid, :timestamp_upload, :name, :owner)`,
-		"model":   `INSERT INTO model (uuid, algo, timestamp_upload, owner) VALUES (:uuid, :algo, :timestamp_upload, :owner)`,
-		"data":    `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
+		"problem":    `INSERT INTO problem (uuid, timestamp_upload, owner, name, description ) VALUES (:uuid, :timestamp_upload, :owner, :name, :description)`,
+		"algo":       `INSERT INTO algo (uuid, timestamp_upload, name, owner) VALUES (:uuid, :timestamp_upload, :name, :owner)`,
+		"model":      `INSERT INTO model (uuid, algo, timestamp_upload, owner) VALUES (:uuid, :algo, :timestamp_upload, :owner)`,
+		"data":       `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
+		"prediction": `INSERT INTO prediction (uuid, timestamp_upload) VALUES (:uuid, :timestamp_upload)`,
 	}
 	selectTemplates = map[string]string{
-		"problem": "SELECT * FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"algo":    "SELECT * FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"model":   "SELECT * FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
-		"data":    "SELECT * FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"problem":    "SELECT * FROM problem ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"algo":       "SELECT * FROM algo ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"model":      "SELECT * FROM model ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"data":       "SELECT * FROM data ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
+		"prediction": "SELECT * FROM prediction ORDER BY timestamp_upload DESC LIMIT %d OFFSET %d",
 	}
 	getOneStatements = map[string]string{
-		"problem": `SELECT * FROM problem WHERE uuid=$1 LIMIT 1`,
-		"algo":    `SELECT * FROM algo WHERE uuid=$1 LIMIT 1`,
-		"model":   `SELECT * FROM model WHERE uuid=$1 LIMIT 1`,
-		"data":    `SELECT * FROM data WHERE uuid=$1 LIMIT 1`,
+		"problem":    `SELECT * FROM problem WHERE uuid=$1 LIMIT 1`,
+		"algo":       `SELECT * FROM algo WHERE uuid=$1 LIMIT 1`,
+		"model":      `SELECT * FROM model WHERE uuid=$1 LIMIT 1`,
+		"data":       `SELECT * FROM data WHERE uuid=$1 LIMIT 1`,
+		"prediction": `SELECT * FROM prediction WHERE uuid=$1 LIMIT 1`,
 	}
 	updateStatements = map[string]string{
 		"problem": `UPDATE problem SET uuid=:ID, timestamp_upload=:TimestampUpload, owner=:Owner, name=:Name, description=:Description WHERE uuid=:prev_uuid`,
@@ -80,10 +84,11 @@ var (
 
 	// Valid model names
 	modelNames = map[string]struct{}{
-		ProblemModelName: struct{}{},
-		AlgoModelName:    struct{}{},
-		DataModelName:    struct{}{},
-		ModelModelName:   struct{}{},
+		ProblemModelName:    struct{}{},
+		AlgoModelName:       struct{}{},
+		DataModelName:       struct{}{},
+		ModelModelName:      struct{}{},
+		PredictionModelName: struct{}{},
 	}
 )
 

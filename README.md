@@ -3,10 +3,12 @@ Morpheo: Storage API
 
 The Storage API for the [Morpheo](https://morpheoorg.github.io/morpheo/index.html)
 platform *receives*, *stores* and *serves*:
- * **Problems** as `.tar.gz` files
  * **Algorithms** as `.tar.gz` files
- * **Models**
  * **Datasets**
+ * **Models**
+ * **Predictions**
+ * **Problems** as `.tar.gz` files
+
 
 Key features
 ------------
@@ -27,34 +29,32 @@ The GET requests are pretty simple:
 
 **GET /health** - Service liveness probe
 
-**GET /:resource** - List all the resources (replacing `:resource` by `problem`, `algo`, `model` or `data`)
+**GET /:resource** - List all the resources (replacing `:resource` by `algo`, `data`, `model`, `prediction` or `problem`)
 
 **GET /:resource/:uuid** - Get a resource by uuid
 
-**GET /:resource/:uuid/:blob** - Get a resource blob by uuid
+**GET /:resource/:uuid/blob** - Get a resource blob by uuid
 
 
 
 <br>
 
-For the POST Requests, a multipart form is used to send metadata. The last form field should be the BLOB data, because it is streamed directly from the request body. The content should be formatted according to the *multipart/form-data* content type [[RFC2388]](https://www.ietf.org/rfc/rfc2388.txt). You can find below the endpoints with the corresponding form fields: 
+The POST Requests use a multipart form to send metadata. The last form field should be the BLOB data, because it is streamed directly from the request body. The content should be formatted according to the *multipart/form-data* content type [[RFC2388]](https://www.ietf.org/rfc/rfc2388.txt). You can find below the endpoints with the corresponding form fields:
 
 
-**POST /problem** - Add a new problem
+**POST /algo** - Add a new algo
 
-* `uuid` (optional): uuid of the problem 
-* `name`: name of the problem
-* `description`: description of the problem
+* `uuid` (optional): uuid of the algo
+* `name`: name of the algo
 * `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
 
 <br>
 
-**POST /algo** - Add a new problem
+**POST /data** - Add a new data
 
-* `uuid` (optional): uuid of the algo 
-* `name`: name of the algo
+* `uuid` (optional): uuid of the data
 * `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
@@ -67,9 +67,19 @@ A model is linked to an algo by its `:uuid`. Blobs are sent directly in the requ
 
 <br>
 
-**POST /data** - Add a new problem
+**POST /prediction** - Add a new prediction
 
-* `uuid` (optional): uuid of the data 
+* `uuid` (optional): uuid of the prediction
+* `size`: size of the blob file
+* `blob`: blob file (must be the last form field)
+
+<br>
+
+**POST /problem** - Add a new problem
+
+* `uuid` (optional): uuid of the problem
+* `name`: name of the problem
+* `description`: description of the problem
 * `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
@@ -79,7 +89,7 @@ A model is linked to an algo by its `:uuid`. Blobs are sent directly in the requ
 **PATCH /problem** - Patch a new problem
 
 All the following fields are optional:
-* `uuid`: uuid of the problem 
+* `uuid`: uuid of the problem
 * `name`: name of the problem
 * `description`: description of the problem
 * `owner`: uuid of the owner
@@ -90,7 +100,7 @@ All the following fields are optional:
 Usage: Uploading or retrieving data
 -----------------------------------
 
-#### Upload a problem, algo or data
+#### Upload an algo, data, prediction or problem
 Examples for a problem with `curl`, assuming storage is running on `localhost:8081`:
 ```shell
 curl -X POST -u user:pass -F uuid=$(uuidgen) -F name=funky_problem -F description=great -F size=666 -F blob=@problem.tar.gz http://localhost:8081/problem
@@ -102,7 +112,7 @@ Examples with `curl`:
 curl --data-binary "@/path/to/model" -u user:password http://localhost:8081/model
 ```
 
-#### Retrieve a blob of data, algo, model or problem
+#### Retrieve a blob of algo, data, model, prediction or problem
 Examples with `curl` to retrieve a data:
 ```shell
 curl -u user:pass http://localhost:8081/data/1f01d777-c3f4-4bdd-9c4a-8388860e4c5e/blob > data.hdf5
