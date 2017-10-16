@@ -59,7 +59,7 @@ GOBUILD = go build --installsuffix cgo --ldflags '-extldflags \"-static\"'
 GOTEST = go test
 
 # Phony targets
-bin: build/target
+bin: api/build/target
 
 clean: docker-clean bin-clean vendor-clean
 
@@ -93,20 +93,20 @@ test:
     $(GOTEST)
 
 # 3. Compiling
-build/target: *.go migrations vendor
-	@echo "Building build/target binary"
-	mkdir -p build
-	$(BUILD_CONTAINER) -v $${PWD}/build:/build:rw $(BUILD_CONTAINER_IMAGE) \
-		$(GOBUILD) -o /build/target .
+api/build/target: api/*.go vendor
+	@echo "Building api/build/target binary"
+	mkdir -p api/build
+	$(BUILD_CONTAINER) -v $${PWD}/$(@D):/build:rw $(BUILD_CONTAINER_IMAGE) \
+		$(GOBUILD) -o /build/target ./$(dir $<)
 
 bin-clean:
 	@echo "Removing build directory"
-	rm -rf build
+	rm -rf api/build
 
 # 4. Packaging
-docker: Dockerfile build/target # <-- <3 GNU Make <3
+docker: api/Dockerfile api/build/target # <-- <3 GNU Make <3
 	@echo "Building the $(DOCKER_REPO)/storage:$(DOCKER_TAG) Docker image"
-	docker build -t $(DOCKER_REPO)/storage:$(DOCKER_TAG) .
+	docker build -t $(DOCKER_REPO)/storage:$(DOCKER_TAG) ./api
 
 docker-clean:
 	@echo "Deleting the $(DOCKER_REPO)/storage:$(DOCKER_TAG) Docker image"

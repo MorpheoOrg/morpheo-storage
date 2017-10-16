@@ -5,6 +5,7 @@
 *.so
 *.dylib
 c.out
+api.coverprofile
 
 # Test binary, build with `go test -c`
 *.test
