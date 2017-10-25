@@ -111,9 +111,9 @@ func NewStorageConfig() (conf *StorageConfig) {
 
 	flag.StringVar(&dbHost, "db-host", "postgres", "The hostname of the postgres database (default: postgres)")
 	flag.IntVar(&dbPort, "db-port", 5432, "The database port")
-	flag.StringVar(&dbName, "db-name", "morpheo_storage", "The database name (default: morpheo_storage)")
-	flag.StringVar(&dbUser, "db-user", "storage", "The database user (default: storage)")
-	flag.StringVar(&dbPass, "db-pass", "tooshort", "The database password to use (default: tooshort)")
+	flag.StringVar(&dbName, "db-name", "db", "The database name (default: morpheo_storage)")
+	flag.StringVar(&dbUser, "db-user", "u", "The database user (default: storage)")
+	flag.StringVar(&dbPass, "db-pass", "p", "The database password to use (default: tooshort)")
 
 	flag.StringVar(&dbMigrationsDir, "db-migrations-dir", "/migrations", "The database migrations directory (default: /migrations)")
 	flag.BoolVar(&dbRollback, "db-rollback", false, "if true, rolls back the last migration (default: false)")

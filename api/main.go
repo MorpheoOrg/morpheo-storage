@@ -51,7 +51,7 @@ import (
 	"gopkg.in/kataras/iris.v6/middleware/basicauth"
 	"gopkg.in/kataras/iris.v6/middleware/logger"
 
-	"github.com/MorpheoOrg/go-packages/common"
+	"github.com/MorpheoOrg/morpheo-go-packages/common"
 )
 
 // Available HTTP routes

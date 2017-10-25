@@ -34,9 +34,9 @@ services:
     volumes:
     - /var/lib/postgresql/docker:/var/lib/postgresql/data
     environment:
-    - POSTGRES_PASSWORD=tooshort
-    - POSTGRES_USER=storage
-    - POSTGRES_DB=morpheo_storage
+    - POSTGRES_PASSWORD=p
+    - POSTGRES_USER=u
+    - POSTGRES_DB=db
     networks:
       - internal
 

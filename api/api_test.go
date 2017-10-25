@@ -42,8 +42,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/MorpheoOrg/go-packages/common"
-	. "github.com/MorpheoOrg/storage/api"
+	"github.com/MorpheoOrg/morpheo-go-packages/common"
+	. "github.com/MorpheoOrg/morpheo-storage/api"
 	"github.com/satori/go.uuid"
 	"gopkg.in/kataras/iris.v6"
 	"gopkg.in/kataras/iris.v6/adaptors/httprouter"

@@ -31,7 +31,7 @@
 #
 # The fact that you are presently reading this means that you have had
 # knowledge of the CeCILL license and that you accept its terms.
-#
+
 
 # User defined variables (use env. variables to override)
 DOCKER_REPO ?= registry.morpheo.io
@@ -40,18 +40,19 @@ DOCKER_TAG ?= $(shell git rev-parse --verify --short HEAD)
 # (Containerized) build commands
 BUILD_CONTAINER = \
   docker run -u $(shell id -u) -it --rm \
-	  --workdir "/usr/local/go/src/github.com/MorpheoOrg/storage" \
-	  -v $${PWD}:/usr/local/go/src/github.com/MorpheoOrg/storage:ro \
+	  --workdir "/usr/local/go/src/github.com/MorpheoOrg/morpheo-storage" \
+	  -v $${PWD}:/usr/local/go/src/github.com/MorpheoOrg/morpheo-storage:ro \
 	  -v $${PWD}/vendor:/vendor/src \
 	  -e GOPATH="/go:/vendor" \
 	  -e CGO_ENABLED=0 \
 	  -e GOOS=linux
 
-GLIDE_CONTAINER = \
+DEP_CONTAINER = \
 	docker run -it --rm \
-	  --workdir "/usr/local/go/src/github.com/MorpheoOrg/storage" \
-	  -v $${PWD}:/usr/local/go/src/github.com/MorpheoOrg/storage \
-		$(BUILD_CONTAINER_IMAGE)
+	  --workdir "/go/src/github.com/MorpheoOrg/morpheo-compute" \
+	  -v $${PWD}:/go/src/github.com/MorpheoOrg/morpheo-compute \
+	  -e GOPATH="/go:/vendor" \
+	  $(BUILD_CONTAINER_IMAGE)
 
 BUILD_CONTAINER_IMAGE = golang:1-onbuild
 
@@ -68,19 +69,19 @@ clean: docker-clean bin-clean vendor-clean
 	      vendor-update
 
 # 1. Vendoring
-vendor: glide.yaml
-	@echo "Pulling dependencies with glide... in a build container"
+vendor: Gopkg.toml
+	@echo "Pulling dependencies with dep... in a build container"
 	rm -rf ./vendor
 	mkdir ./vendor
-	$(GLIDE_CONTAINER) bash -c \
-		"go get github.com/Masterminds/glide && glide install && chown $(shell id -u):$(shell id -g) -R ./glide.lock ./vendor"
+	$(DEP_CONTAINER) bash -c \
+		"go get -u github.com/golang/dep/cmd/dep && dep ensure && chown $(shell id -u):$(shell id -g) -R ./Gopkg.* ./vendor"
 
 vendor-update:
-	@echo "Updating dependencies with glide... in a build container"
+	@echo "Updating dependencies with dep... in a build container"
 	rm -rf ./vendor
 	mkdir ./vendor
-	$(GLIDE_CONTAINER) bash -c \
-		"go get github.com/Masterminds/glide && glide update && chown $(shell id -u):$(shell id -g) -R ./glide.lock ./vendor"
+	$(DEP_CONTAINER) bash -c \
+		"go get github.com/golang/dep/cmd/dep && dep ensure -update && chown $(shell id -u):$(shell id -g) -R ./Gopkg.* ./vendor"
 
 vendor-clean:
 	@echo "Dropping the vendor folder"
