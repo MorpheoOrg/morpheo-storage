@@ -31,85 +31,58 @@
 #
 # The fact that you are presently reading this means that you have had
 # knowledge of the CeCILL license and that you accept its terms.
-
+#
 
 # User defined variables (use env. variables to override)
 DOCKER_REPO ?= registry.morpheo.io
 DOCKER_TAG ?= $(shell git rev-parse --verify --short HEAD)
 
-# (Containerized) build commands
-BUILD_CONTAINER = \
-  docker run -u $(shell id -u) -it --rm \
-	  --workdir "/usr/local/go/src/github.com/MorpheoOrg/morpheo-storage" \
-	  -v $${PWD}:/usr/local/go/src/github.com/MorpheoOrg/morpheo-storage:ro \
-	  -v $${PWD}/vendor:/vendor/src \
-	  -e GOPATH="/go:/vendor" \
-	  -e CGO_ENABLED=0 \
-	  -e GOOS=linux
+# Targets (files & phony targets)
+TARGETS = api
+BIN_TARGETS = $(foreach TARGET,$(TARGETS),$(TARGET)/build/target)
+BIN_CLEAN_TARGETS = $(foreach TARGET,$(TARGETS),$(TARGET)/build/target/clean)
+DOCKER_TARGETS = $(foreach TARGET,$(TARGETS),$(TARGET)-docker)
+DOCKER_CLEAN_TARGETS = $(foreach TARGET,$(TARGETS),$(TARGET)-docker-clean)
 
-DEP_CONTAINER = \
-	docker run -it --rm \
-	  --workdir "/go/src/github.com/MorpheoOrg/morpheo-compute" \
-	  -v $${PWD}:/go/src/github.com/MorpheoOrg/morpheo-compute \
-	  -e GOPATH="/go:/vendor" \
-	  $(BUILD_CONTAINER_IMAGE)
-
-BUILD_CONTAINER_IMAGE = golang:1-onbuild
-
-GOBUILD = go build --installsuffix cgo --ldflags '-extldflags \"-static\"'
-GOTEST = go test
-
-# Phony targets
-bin: api/build/target
+## Project-wide targets
+bin: $(BIN_TARGETS)
+bin-clean: $(BIN_CLEAN_TARGETS)
+docker: $(DOCKER_TARGETS)
+docker-clean: $(DOCKER_CLEAN_TARGETS)
 
 clean: docker-clean bin-clean vendor-clean
 
 .DEFAULT: bin
-.PHONY: test bin bin-clean clean docker docker-clean clean vendor-clean \
-	      vendor-update
+.PHONY: bin bin-clean \
+	    vendor-update go-packages \
+		docker docker-clean $(DOCKER_TARGETS) $(DOCKER_CLEAN_TARGETS)
 
-# 1. Vendoring
+# 1. Building
+%/build/target: %/*.go
+	@echo "Building $(subst /build/target,,$(@)) binary..."
+	@mkdir -p $(@D)
+	@CGO_ENABLED=0 GOOS=linux go build -a --installsuffix cgo --ldflags '-extldflags \"-static\"' -o $@ ./$(dir $<)
+
+%/build/target/clean:
+	@echo "Removing $(subst /build/target,,$(@)) binary..."
+	rm -f $(@D)
+
+# 2. Vendoring
 vendor: Gopkg.toml
-	@echo "Pulling dependencies with dep... in a build container"
-	rm -rf ./vendor
-	mkdir ./vendor
-	$(DEP_CONTAINER) bash -c \
-		"go get -u github.com/golang/dep/cmd/dep && dep ensure && chown $(shell id -u):$(shell id -g) -R ./Gopkg.* ./vendor"
+	@echo "Pulling dependencies with dep..."
+	dep ensure
 
 vendor-update:
-	@echo "Updating dependencies with dep... in a build container"
-	rm -rf ./vendor
-	mkdir ./vendor
-	$(DEP_CONTAINER) bash -c \
-		"go get github.com/golang/dep/cmd/dep && dep ensure -update && chown $(shell id -u):$(shell id -g) -R ./Gopkg.* ./vendor"
+	@echo "Updating dependencies with dep..."
+	dep ensure -update
 
-vendor-clean:
-	@echo "Dropping the vendor folder"
-	rm -rf ./vendor
+# 3. Packaging
+$(DOCKER_TARGETS): %-docker: %/build/target
+	@echo "Building the $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
+	docker build -t $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) \
+	  ./$(subst -docker,,$(@))
 
-# 2. Testing
-test:
-	@echo "Running go test in $(subst -test,,$(@)) directory"
-	$(BUILD_CONTAINER) -v $${PWD}/$(@D):/build:rw $(BUILD_CONTAINER_IMAGE) \
-    $(GOTEST)
-
-# 3. Compiling
-api/build/target: api/*.go vendor
-	@echo "Building api/build/target binary"
-	mkdir -p api/build
-	$(BUILD_CONTAINER) -v $${PWD}/$(@D):/build:rw $(BUILD_CONTAINER_IMAGE) \
-		$(GOBUILD) -o /build/target ./$(dir $<)
-
-bin-clean:
-	@echo "Removing build directory"
-	rm -rf api/build
-
-# 4. Packaging
-docker: api/Dockerfile api/build/target # <-- <3 GNU Make <3
-	@echo "Building the $(DOCKER_REPO)/storage:$(DOCKER_TAG) Docker image"
-	docker build -t $(DOCKER_REPO)/storage:$(DOCKER_TAG) ./api
-
-docker-clean:
-	@echo "Deleting the $(DOCKER_REPO)/storage:$(DOCKER_TAG) Docker image"
-	docker rmi $(DOCKER_REPO)/storage:$(DOCKER_TAG) || \
-		echo "No $(DOCKER_REPO)/storage:$(DOCKER_TAG) docker image to remove"
+$(DOCKER_CLEAN_TARGETS):
+	@echo "Deleting the $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
+	docker rmi $(DOCKER_REPO)/compute-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) || \
+		echo "No $(DOCKER_REPO)/compute-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) docker image to remove"
