@@ -224,7 +224,7 @@ func main() {
 	}
 
 	// Set BlobStore
-	blobStore, err := SetBlobStore(conf.DataDir, conf.AWSBucket, conf.AWSRegion)
+	blobStore, err := SetBlobStore(*conf)
 	if err != nil {
 		log.Fatalf("Cannot set blobStore: %s", err)
 	}
@@ -680,15 +680,21 @@ func (s *APIServer) getPredictionBlob(c *iris.Context) {
 }
 
 // SetBlobStore defines the blobstore type (local, fake, S3)
-func SetBlobStore(dataDir string, awsBucket string, awsRegion string) (common.BlobStore, error) {
+func SetBlobStore(conf StorageConfig) (common.BlobStore, error) {
 	switch {
-	case awsBucket == "" || awsRegion == "":
-		log.Println(fmt.Sprintf("[LocalBlobStore] Data is stored locally in directory: %s", dataDir))
-		return common.NewLocalBlobStore(dataDir)
-	case awsBucket == "fake" && awsRegion == "fake":
-		return common.NewFakeBlobStore(dataDir)
+	case conf.BlobStore == "gc" && conf.GCBucket != "":
+		log.Println("[GCBlobStore] Data stored on Google Cloud Storage")
+		return common.NewGCBlobStore(conf.GCBucket)
+	case conf.BlobStore == "s3" && conf.AWSBucket != "" && conf.AWSRegion != "":
+		log.Println("[S3BlobStore] Data stored on Amazon S3")
+		return common.NewS3BlobStore(conf.AWSBucket, conf.AWSRegion)
+	case conf.BlobStore == "local":
+		log.Println(fmt.Sprintf("[LocalBlobStore] Data is stored locally in directory: %s", conf.DataDir))
+		return common.NewLocalBlobStore(conf.DataDir)
+	case conf.BlobStore == "mock":
+		log.Println("[MOCKBlobStore] Blobstore Mock used to 'store' data")
+		return common.NewMOCKBlobStore(conf.DataDir)
 	default:
-		log.Println("[S3BlobStore] Data is stored on Amazon S3")
-		return common.NewS3BlobStore(awsBucket, awsRegion)
+		return nil, fmt.Errorf("Error setting BlobStore: Invalid configuration")
 	}
 }

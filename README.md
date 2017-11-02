@@ -153,13 +153,18 @@ Usage of ./storage-api/target/storage-api:
   -db-rollback
     	if true, rolls back the last migration (default: false)
 
+  -blobstore string
+      Storage service provider: 'gc' for Google Cloud Storage, 's3' for AWS S3, 'local' (default) and 'mock' supported"
+
   -data-dir string
-      The directory to store blob data under (default: /data).
+      The directory to store blob data under (default: /data)
       Note that this only applies when using local storage (default "/data")
   -s3-bucket string
       The AWS Bucket for S3 Storage (default: empty string)
   -s3-region string
       The AWS Bucket region for S3 Storage (default: empty string)
+  -gc-bucket
+      The Google Cloud Storage Bucket (default: empty string)
 ```
 
 Maintainers

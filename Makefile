@@ -35,7 +35,7 @@
 
 # User defined variables (use env. variables to override)
 DOCKER_REPO ?= registry.morpheo.io
-DOCKER_TAG ?= $(shell git rev-parse --verify --short HEAD)
+DOCKER_TAG ?= latest
 
 # Targets (files & phony targets)
 TARGETS = api
@@ -90,11 +90,11 @@ tests: vendor-go-packages
 
 # 4. Packaging
 $(DOCKER_TARGETS): %-docker: %/build/target
-	@echo "Building the $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
-	docker build -t $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) \
+	@echo "Building the $(DOCKER_REPO)/storage-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
+	docker build -t $(DOCKER_REPO)/storage-$(subst -docker,,$(@)):$(DOCKER_TAG) \
 	  ./$(subst -docker,,$(@))
 
 $(DOCKER_CLEAN_TARGETS):
-	@echo "Deleting the $(DOCKER_REPO)/compute-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
-	docker rmi $(DOCKER_REPO)/compute-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) || \
-		echo "No $(DOCKER_REPO)/compute-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) docker image to remove"
+	@echo "Deleting the $(DOCKER_REPO)/storage-$(subst -docker,,$(@)):$(DOCKER_TAG) Docker image"
+	docker rmi $(DOCKER_REPO)/storage-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) || \
+		echo "No $(DOCKER_REPO)/storage-$(subst -docker-clean,,$(@)):$(DOCKER_TAG) docker image to remove"

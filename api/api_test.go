@@ -218,7 +218,7 @@ func TestPatchProblem(t *testing.T) {
 
 // setTestApp set up the Iris App for testing
 func setTestApp() *iris.Framework {
-	_ = NewStorageConfig()
+	conf := NewStorageConfig()
 	app := iris.New()
 	app.Adapt(iris.DevLogger(), httprouter.New())
 	auth := SetAuthentication("u", "p")
@@ -231,8 +231,8 @@ func setTestApp() *iris.Framework {
 	predictionModel, _ := NewMockedModel(PredictionModelName)
 
 	// set Blobstore
-	blobStore, _ := SetBlobStore("fake", "fake", "fake")
-	// blobStore, _ := SetBlobStore("test_data", "", "")
+	conf.BlobStore = "mock"
+	blobStore, _ := SetBlobStore(*conf)
 
 	api := &APIServer{
 		BlobStore:       blobStore,

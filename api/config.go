@@ -60,12 +60,16 @@ type StorageConfig struct {
 	DBMigrationsDir string
 	DBRollback      bool
 
+	// Blobstore
+	BlobStore string
+
 	// local (disk) blob store configuration
 	DataDir string
-
 	// S3 config
 	AWSBucket string
 	AWSRegion string
+	// Google Cloud Config
+	GCBucket string
 }
 
 // TLSOn returns true if TLS credentials have been provided. The API will then
@@ -94,10 +98,12 @@ func NewStorageConfig() (conf *StorageConfig) {
 		dbMigrationsDir string
 		dbRollback      bool
 
-		dataDir string
+		blobStore string
 
+		dataDir   string
 		awsBucket string
 		awsRegion string
+		gcBucket  string
 	)
 
 	// CLI Flags
@@ -118,10 +124,12 @@ func NewStorageConfig() (conf *StorageConfig) {
 	flag.StringVar(&dbMigrationsDir, "db-migrations-dir", "/migrations", "The database migrations directory (default: /migrations)")
 	flag.BoolVar(&dbRollback, "db-rollback", false, "if true, rolls back the last migration (default: false)")
 
-	flag.StringVar(&dataDir, "data-dir", "/data", "The directory to store locally blob data under (default: /data)")
+	flag.StringVar(&blobStore, "blobstore", "local", "Storage service provider: 'gc' for Google Cloud Storage, 's3' for AWS S3, 'local' (default) and 'mock' supported")
 
+	flag.StringVar(&dataDir, "data-dir", "/data", "The directory to store locally blob data under (default: /data)")
 	flag.StringVar(&awsBucket, "s3-bucket", "", "AWS Bucket (default: empty string)")
 	flag.StringVar(&awsRegion, "s3-region", "", "AWS Region (default: empty string)")
+	flag.StringVar(&gcBucket, "gc-bucket", "", "Google Cloud Storage Bucket (default: empty string)")
 
 	flag.Parse()
 
@@ -144,10 +152,12 @@ func NewStorageConfig() (conf *StorageConfig) {
 		DBMigrationsDir: dbMigrationsDir,
 		DBRollback:      dbRollback,
 
-		DataDir: dataDir,
+		BlobStore: blobStore,
 
+		DataDir:   dataDir,
 		AWSBucket: awsBucket,
 		AWSRegion: awsRegion,
+		GCBucket:  gcBucket,
 	}
 	return
 }
