@@ -16,10 +16,10 @@ import (
 
 // PostMultipartFields represents all the valid multipart fields for the routes
 var PostMultipartFields = map[string][]string{
-	ProblemListRoute: []string{"uuid", "name", "description", "owner", "size", "blob"},
-	AlgoListRoute:    []string{"uuid", "name", "owner", "size", "blob"},
-	// ModelListRoute:   []string{"uuid", "name", "owner", "size", "blob"},
-	DataListRoute: []string{"uuid", "owner", "size", "blob"},
+	ProblemListRoute: []string{"uuid", "name", "description", "size", "blob"},
+	AlgoListRoute:    []string{"uuid", "name", "size", "blob"},
+	// ModelListRoute:   []string{"uuid", "name", "size", "blob"},
+	DataListRoute: []string{"uuid", "size", "blob"},
 }
 
 const (
@@ -113,15 +113,6 @@ func (s *APIServer) streamMultipartToStorage(ResourceModel Model, resource commo
 			formFields["name"], err = readMultipartField(formName, part, StrFieldMaxLength)
 			if err != nil {
 				return 400, fmt.Errorf("Error reading Name: %s", err)
-			}
-		case "owner":
-			OwnerUUIDStr, err := readMultipartField(formName, part, StrFieldMaxLength)
-			if err != nil {
-				return 400, fmt.Errorf("Error reading Owner UUID %s", err)
-			}
-			formFields["owner"], err = uuid.FromString(OwnerUUIDStr)
-			if err != nil {
-				return 400, fmt.Errorf("Error parsing Owner UUID %s", err)
 			}
 		case "size":
 			sizeStr, err := readMultipartField(formName, part, intFieldMaxLength)

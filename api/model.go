@@ -58,10 +58,10 @@ const (
 var (
 	// SQL statements
 	insertStatements = map[string]string{
-		"problem":    `INSERT INTO problem (uuid, timestamp_upload, owner, name, description ) VALUES (:uuid, :timestamp_upload, :owner, :name, :description)`,
-		"algo":       `INSERT INTO algo (uuid, timestamp_upload, name, owner) VALUES (:uuid, :timestamp_upload, :name, :owner)`,
-		"model":      `INSERT INTO model (uuid, algo, timestamp_upload, owner) VALUES (:uuid, :algo, :timestamp_upload, :owner)`,
-		"data":       `INSERT INTO data (uuid, timestamp_upload, owner) VALUES (:uuid, :timestamp_upload, :owner)`,
+		"problem":    `INSERT INTO problem (uuid, timestamp_upload, name, description ) VALUES (:uuid, :timestamp_upload, :name, :description)`,
+		"algo":       `INSERT INTO algo (uuid, timestamp_upload, name) VALUES (:uuid, :timestamp_upload, :name)`,
+		"model":      `INSERT INTO model (uuid, algo, timestamp_upload) VALUES (:uuid, :algo, :timestamp_upload)`,
+		"data":       `INSERT INTO data (uuid, timestamp_upload) VALUES (:uuid, :timestamp_upload)`,
 		"prediction": `INSERT INTO prediction (uuid, timestamp_upload) VALUES (:uuid, :timestamp_upload)`,
 	}
 	selectTemplates = map[string]string{
@@ -79,7 +79,7 @@ var (
 		"prediction": `SELECT * FROM prediction WHERE uuid=$1 LIMIT 1`,
 	}
 	updateStatements = map[string]string{
-		"problem": `UPDATE problem SET uuid=:ID, timestamp_upload=:TimestampUpload, owner=:Owner, name=:Name, description=:Description WHERE uuid=:prev_uuid`,
+		"problem": `UPDATE problem SET uuid=:ID, timestamp_upload=:TimestampUpload, name=:Name, description=:Description WHERE uuid=:prev_uuid`,
 	}
 
 	// Valid model names
@@ -234,8 +234,6 @@ func (m *MockedModel) GetOne(instance interface{}, id uuid.UUID) error {
 		i := reflect.ValueOf(instance).Elem()
 		i.FieldByName("ID").Set(reflect.ValueOf(u))
 		u = uuid.NewV4()
-		i.FieldByName("Owner").Set(reflect.ValueOf(u))
-
 		i.FieldByName("Name").SetString("testName")
 		i.FieldByName("Description").SetString("testDescription")
 

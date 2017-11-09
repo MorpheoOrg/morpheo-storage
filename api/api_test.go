@@ -209,10 +209,10 @@ func TestPatchProblem(t *testing.T) {
 	// Test valid patch returns Success
 	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("description", "new Great Description").WithFormField("uuid", uuid.NewV4()).Expect().Status(200).Body().Match("(.*)new Great Description(.*)")
 
-	// Test used UUID returns Conflict
+	// // Test used UUID returns Conflict
 	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("uuid", ProblemMockUUIDStr).Expect().Status(409)
 
-	// 	Test valid name returns BadRequest
+	// // 	Test valid name returns BadRequest
 	e.PATCH(ProblemListRoute+"/"+ProblemMockUUIDStr).WithBasicAuth("u", "p").WithMultipart().WithFormField("name", "").Expect().Status(400).Body().Match("(.*)'Name' unset(.*)")
 }
 
@@ -252,18 +252,12 @@ func NewMultipartFormMap(id uuid.UUID) (m map[string]map[string]string, mUUID ma
 		ProblemListRoute: map[string]string{
 			"name":        "testName",
 			"description": "testDescription",
-			"owner":       uuid.NewV4().String(),
 		},
 		AlgoListRoute: map[string]string{
-			"name":  "testName",
-			"owner": uuid.NewV4().String(),
+			"name": "testName",
 		},
-		ModelListRoute: map[string]string{
-			"owner": uuid.NewV4().String(),
-		},
-		DataListRoute: map[string]string{
-			"owner": uuid.NewV4().String(),
-		},
+		ModelListRoute:      map[string]string{},
+		DataListRoute:       map[string]string{},
 		PredictionListRoute: map[string]string{},
 	}
 	mUUID = m

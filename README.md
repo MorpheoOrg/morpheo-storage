@@ -46,7 +46,6 @@ The POST Requests use a multipart form to send metadata. The last form field sho
 
 * `uuid` (optional): uuid of the algo
 * `name`: name of the algo
-* `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
 
@@ -55,7 +54,6 @@ The POST Requests use a multipart form to send metadata. The last form field sho
 **POST /data** - Add a new data
 
 * `uuid` (optional): uuid of the data
-* `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
 
@@ -80,7 +78,6 @@ A model is linked to an algo by its `:uuid`. Blobs are sent directly in the requ
 * `uuid` (optional): uuid of the problem
 * `name`: name of the problem
 * `description`: description of the problem
-* `owner` (optional): uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
 
@@ -92,7 +89,6 @@ All the following fields are optional:
 * `uuid`: uuid of the problem
 * `name`: name of the problem
 * `description`: description of the problem
-* `owner`: uuid of the owner
 * `size`: size of the blob file
 * `blob`: blob file (must be the last form field)
 
